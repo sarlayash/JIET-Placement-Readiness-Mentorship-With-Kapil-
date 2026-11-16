@@ -1584,6 +1584,76 @@ function closeBadgesModal() {
 }
 
 // ==========================================
+// PROFILE, LOGOFF & RESET ENGINE
+// ==========================================
+function openProfileModal() {
+  const modal = document.getElementById('profileModal');
+  if (!modal) return;
+  document.getElementById('profileModalName').textContent = state.learnerName;
+  document.getElementById('profileInputRename').value = state.learnerName === 'Learner' ? '' : state.learnerName;
+  document.getElementById('profileStatXP').textContent = `⚡ ${state.xp.toLocaleString()} XP`;
+  document.getElementById('profileStatLevel').textContent = `⭐ Level ${state.level}`;
+  document.getElementById('profileStatBadges').textContent = `🏅 ${state.unlockedBadges.size}/8 Badges`;
+  modal.classList.remove('hidden');
+}
+
+function closeProfileModal() {
+  const modal = document.getElementById('profileModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function saveNewNameFromProfile() {
+  const input = document.getElementById('profileInputRename');
+  const val = input ? input.value.trim() : '';
+  if (val) {
+    state.learnerName = val;
+    updateHUD();
+    persistState();
+    closeProfileModal();
+    showToast(`Student name updated to ${val}! ✍️`);
+  } else {
+    alert('Please enter a valid name.');
+  }
+}
+
+function handleLogoff() {
+  if (confirm('Are you sure you want to log off? You can switch to another learner.')) {
+    closeProfileModal();
+    state.learnerName = 'Learner';
+    updateHUD();
+    persistState();
+    
+    // Show onboarding modal for new user
+    const onboarding = document.getElementById('onboardingModal');
+    if (onboarding) {
+      document.getElementById('learnerInputName').value = '';
+      onboarding.classList.remove('hidden');
+    }
+    showToast('Logged off successfully. Welcome a new learner! 👋');
+  }
+}
+
+function handleResetProfile() {
+  if (confirm('⚠️ DANGER: Are you sure you want to completely RESET all your profile progress, earned XP, and unlocked badges? This action cannot be undone.')) {
+    try {
+      localStorage.removeItem('faceprep_kapil_placement_state');
+    } catch(e) {}
+    state.learnerName = 'Learner';
+    state.xp = 0;
+    state.streak = 0;
+    state.level = 1;
+    state.unlockedBadges = new Set();
+    state.answeredQuestions = {};
+    state.rahulOrder = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    
+    showToast('Profile & progress reset completely! Restarting...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
+  }
+}
+
+// ==========================================
 // 10. CONFETTI ENGINE (PURE CANVAS)
 // ==========================================
 let confettiParticles = [];
@@ -1687,11 +1757,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const badgesBtn = document.getElementById('badgesModalBtn');
   if (badgesBtn) badgesBtn.addEventListener('click', openBadgesModal);
 
-  // Close modal on click outside
+  // Profile & Settings Modal
+  const profileSettingsBtn = document.getElementById('profileSettingsBtn');
+  if (profileSettingsBtn) profileSettingsBtn.addEventListener('click', openProfileModal);
+
+  const userPill = document.getElementById('userProfilePill');
+  if (userPill) userPill.addEventListener('click', openProfileModal);
+
+  // Close modals on click outside
   const bModal = document.getElementById('badgesModal');
   if (bModal) {
     bModal.addEventListener('click', (e) => {
       if (e.target === bModal) closeBadgesModal();
+    });
+  }
+
+  const pModal = document.getElementById('profileModal');
+  if (pModal) {
+    pModal.addEventListener('click', (e) => {
+      if (e.target === pModal) closeProfileModal();
     });
   }
 

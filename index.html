@@ -65,7 +65,11 @@
             <span class="badge-count-pill" id="badgeCount">0/8</span>
           </button>
 
-          <div class="user-pill" id="userProfilePill">
+          <button id="profileSettingsBtn" class="hud-btn" title="Profile, Log Off & Reset Progress" aria-label="Profile Settings">
+            <span>⚙️</span>
+          </button>
+
+          <div class="user-pill" id="userProfilePill" title="Click to view Profile, Log Off or Reset">
             <img src="assets/kapil_avatar.png" alt="Mentor Kapil" class="avatar-sm">
             <span class="user-name-display" id="navUserName">Learner</span>
           </div>
@@ -545,6 +549,7 @@
             <label for="certCustomName">Name on Certificate:</label>
             <input type="text" id="certCustomName" placeholder="Enter Full Name..." oninput="updateCertName(this.value)">
             <button class="btn btn-secondary" onclick="refreshCert()">Update</button>
+            <button class="btn btn-secondary" onclick="openProfileModal()" title="Switch learner or reset">👤 Switch / Reset</button>
           </div>
           <div class="cert-btn-group">
             <button class="btn btn-primary" onclick="downloadCertificatePNG()">
@@ -702,6 +707,57 @@
             <span>Begin Placement Mentorship</span>
             <span>⚡</span>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile & Settings Modal (Log Off & Reset) -->
+    <div id="profileModal" class="modal-overlay hidden">
+      <div class="modal-card profile-settings-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-title-icon">👤</span>
+            <h3>Learner Profile & Settings</h3>
+          </div>
+          <button class="modal-close-btn" onclick="closeProfileModal()">×</button>
+        </div>
+
+        <div class="profile-modal-body">
+          <div class="profile-summary-box">
+            <img src="assets/kapil_avatar.png" alt="Avatar" class="profile-modal-avatar">
+            <div class="profile-summary-details">
+              <h4 id="profileModalName">Learner</h4>
+              <p>JIET Placement Mentorship with Kapil • FACE Prep</p>
+              <div class="profile-stats-row">
+                <span class="profile-stat-badge" id="profileStatXP">⚡ 0 XP</span>
+                <span class="profile-stat-badge" id="profileStatLevel">⭐ Level 1</span>
+                <span class="profile-stat-badge" id="profileStatBadges">🏅 0/8 Badges</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-edit-name-group">
+            <label for="profileInputRename">Change / Update Student Name:</label>
+            <div class="rename-input-wrap">
+              <input type="text" id="profileInputRename" class="form-input" placeholder="Enter Full Name...">
+              <button class="btn btn-secondary" onclick="saveNewNameFromProfile()">Save</button>
+            </div>
+          </div>
+
+          <div class="profile-actions-divider"></div>
+
+          <div class="profile-danger-zone">
+            <h4>Account & Session Controls</h4>
+            <div class="profile-btns-col">
+              <button class="btn btn-secondary btn-block logoff-btn" onclick="handleLogoff()">
+                <span>🚪 Log Off (Switch Learner)</span>
+              </button>
+              <button class="btn btn-block reset-btn" onclick="handleResetProfile()">
+                <span>⚠️ Reset All Profile & Test Progress</span>
+              </button>
+            </div>
+            <p class="profile-reset-warning">Resetting clears all earned XP, badges, test answers, and starts fresh.</p>
+          </div>
         </div>
       </div>
     </div>
