@@ -1,0 +1,17 @@
+{
+  "name": "JIET Placement Readiness Mentorship With Kapil",
+  "short_name": "JIET Kapil",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FF5500",
+  "description": "JIET Placement Readiness & Verbal Aptitude Mentorship with Kapil powered by FACE Prep.",
+  "icons": [
+    {
+      "src": "assets/kapil_avatar.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>JIET Placement Readiness Mentorship With Kapil | Powered by FACE Prep</title>
+  <meta name="description" content="JIET Placement Readiness Mentorship with Kapil powered by FACE Prep. Master Verbal Aptitude, Sentence Completion, and Para-Jumbles with XP, badges, and certification.">
+  <meta name="theme-color" content="#FF5500">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="assets/kapil_avatar.png">
+  <link rel="apple-touch-icon" href="assets/kapil_avatar.png">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@600;700&family=Cinzel:wght@600;700;800&family=Alex+Brush&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- App Container -->
+  <div id="app" class="app-container">
+
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand-group">
+          <img src="assets/faceprep_logo.png" alt="FACE Prep Logo" class="brand-logo" onerror="this.src='assets/kapil_faceprep_banner.png'">
+          <div class="brand-divider"></div>
+          <div class="brand-text">
+            <span class="brand-title"><strong>JIET</strong> Mentorship With <strong>Kapil</strong></span>
+            <span class="brand-badge">Powered by FACE Prep • CPCV13-05M</span>
+          </div>
+        </div>
+
+        <!-- Learner HUD (XP, Level, Streak, Audio, PWA Install) -->
+        <div class="learner-hud">
+          <button id="pwaInstallBtn" class="pwa-install-hud-btn" style="display:none;" title="Install as Mobile App">
+            <span>📲</span>
+            <span>Install App</span>
+          </button>
+          <div class="hud-item streak-hud" id="streakHud" title="Current Correct Streak">
+            <span class="hud-icon">🔥</span>
+            <span class="hud-value" id="hudStreak">0</span>
+            <span class="hud-label">Streak</span>
+          </div>
+
+          <div class="hud-item xp-hud" id="xpHud" title="Earned Placement XP">
+            <span class="hud-icon">⚡</span>
+            <span class="hud-value" id="hudXP">0</span>
+            <span class="hud-label">XP</span>
+          </div>
+
+          <div class="hud-item level-hud" id="levelHud" title="Current Mastery Level">
+            <span class="hud-icon">⭐</span>
+            <span class="hud-value" id="hudLevel">Lvl 1</span>
+          </div>
+
+          <button id="soundToggleBtn" class="hud-btn" title="Toggle Sound FX" aria-label="Toggle Sound">
+            <span id="soundIcon">🔊</span>
+          </button>
+
+          <button id="badgesModalBtn" class="hud-btn badge-btn" title="View Earned Badges" aria-label="View Badges">
+            <span>🏅</span>
+            <span class="badge-count-pill" id="badgeCount">0/8</span>
+          </button>
+
+          <div class="user-pill" id="userProfilePill">
+            <img src="assets/kapil_avatar.png" alt="Mentor Kapil" class="avatar-sm">
+            <span class="user-name-display" id="navUserName">Learner</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overall Global Level Progress Bar -->
+      <div class="global-progress-track">
+        <div class="global-progress-fill" id="globalProgressFill" style="width: 5%;"></div>
+      </div>
+    </header>
+
+    <!-- Top Mentor Banner Hero -->
+    <section class="mentor-hero-card">
+      <div class="hero-left">
+        <div class="mentor-avatar-frame">
+          <img src="assets/kapil_avatar.png" alt="Kapil - Master Placement Mentor" class="mentor-portrait">
+          <span class="mentor-live-status">● Live Mentor</span>
+        </div>
+        <div class="hero-info">
+          <div class="hero-tag">JIET Placement Division • Official FACE Prep Curriculum</div>
+          <h1 class="hero-headline">JIET Placement Readiness Mentorship <span class="highlight-orange">With Kapil</span></h1>
+          <p class="hero-subtext">Crush corporate verbal aptitude tests (TCS, Infosys, Cognizant, Wipro, Accenture) with proactive sentence completion & para-jumble master strategies powered by FACE Prep.</p>
+          <div class="hero-stats-row">
+            <span class="stat-pill"><strong>35+</strong> Interactive Challenges</span>
+            <span class="stat-pill"><strong>8</strong> Verified Badges</span>
+            <span class="stat-pill"><strong>100%</strong> Complete Coverage of Worksheet</span>
+            <span class="stat-pill highlight-pill">📜 Official Certificate</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <img src="assets/kapil_faceprep_banner.png" alt="FACE Prep Banner" class="hero-promo-img">
+      </div>
+    </section>
+
+    <!-- Navigation Tabs / Level Stepper -->
+    <nav class="level-nav-bar" id="levelNavBar">
+      <button class="nav-tab active" data-tab="tab-concepts">
+        <span class="tab-icon">📖</span>
+        <span class="tab-text">1. Concept Mastery</span>
+      </button>
+      <button class="nav-tab" data-tab="tab-drills">
+        <span class="tab-icon">🎯</span>
+        <span class="tab-text">2. Proactive Drills</span>
+      </button>
+      <button class="nav-tab" data-tab="tab-sentences">
+        <span class="tab-icon">✍️</span>
+        <span class="tab-text">3. Sentence Battles</span>
+      </button>
+      <button class="nav-tab" data-tab="tab-parajumbles">
+        <span class="tab-icon">🧩</span>
+        <span class="tab-text">4. Para-Jumbles</span>
+      </button>
+      <button class="nav-tab" data-tab="tab-cloze">
+        <span class="tab-icon">🧪</span>
+        <span class="tab-text">5. Passage Cloze</span>
+      </button>
+      <button class="nav-tab certificate-tab-btn" data-tab="tab-certificate">
+        <span class="tab-icon">🏆</span>
+        <span class="tab-text">6. Certificate</span>
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- ================= LEVEL 1: CONCEPT MASTERY ================= -->
+      <section id="tab-concepts" class="tab-pane active">
+        <div class="section-header">
+          <div class="badge-chip">Level 1 • Foundations</div>
+          <h2>Concept Foundation: Sentence Completion & Para-Jumbles</h2>
+          <p class="section-desc">Study the exact theoretical frameworks straight from the CPCV13-05M curriculum sheet before facing the timed placement drills.</p>
+        </div>
+
+        <div class="concepts-grid">
+          <!-- Card 1: Sentence Completion Framework -->
+          <div class="concept-card highlight-card">
+            <div class="card-top">
+              <span class="card-icon">🎯</span>
+              <div class="card-title-group">
+                <h3>Sentence Completion: Proactive Solving</h3>
+                <span class="card-tag">Core Technique</span>
+              </div>
+            </div>
+            <p class="concept-intro">
+              Don't just jump directly into the options! <strong>Proactive Solving</strong> means predicting the tone and meaning of the blank before glancing at the answers.
+            </p>
+            <div class="concept-breakdown">
+              <div class="breakdown-item">
+                <h4>1. Identifying Clues</h4>
+                <p>Scan for context indicators inside the sentence that dictate the direction of the missing word.</p>
+              </div>
+
+              <div class="breakdown-item">
+                <h4>2. Signposts (The Direction Markers)</h4>
+                <div class="sub-pill-group">
+                  <div class="signpost-pill support">
+                    <strong>🟢 Support Signs:</strong> and, similarly, in addition, since, also, thus, because, etc.
+                    <em>(The thought continues in the same direction)</em>
+                  </div>
+                  <div class="signpost-pill contrast">
+                    <strong>🔴 Contrast Signs:</strong> but, despite, yet, however, unless, rather, although, etc.
+                    <em>(The thought reverses direction 180 degrees)</em>
+                  </div>
+                </div>
+              </div>
+
+              <div class="breakdown-item">
+                <h4>3. Root Word Clues</h4>
+                <div class="roots-table-wrap">
+                  <table class="roots-table">
+                    <thead>
+                      <tr>
+                        <th>Affix Type</th>
+                        <th>Positive (+)</th>
+                        <th>Negative (-)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Prefixes</strong></td>
+                        <td><span class="tag-pos">pro, bene, philo</span></td>
+                        <td><span class="tag-neg">non, un, im, in, mal</span></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Suffixes</strong></td>
+                        <td><span class="tag-pos">ble, ant, ent, en</span></td>
+                        <td><span class="tag-neg">less, cide</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="breakdown-item">
+                <h4>4. Sentence Structure Clues</h4>
+                <ul class="bullet-list">
+                  <li><strong>Cause & Effect:</strong> accordingly, consequently, because, thus, for, since</li>
+                  <li><strong>Definition / Restatement:</strong> comma (,), semicolon (;), or colon (:)</li>
+                  <li><strong>Part of Speech:</strong> determining whether the missing slot demands a noun, verb, adjective, or adverb.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Mentor Kapil's Pro Tip Callout -->
+            <div class="mentor-tip-callout">
+              <div class="mentor-tip-header">
+                <img src="assets/kapil_avatar.png" alt="Kapil Tip" class="tip-avatar">
+                <div>
+                  <strong>Kapil's Pro Tip: The 5-Second Blank Scan</strong>
+                  <span class="tip-role">Mentorship By Kapil • FACE Prep</span>
+                </div>
+              </div>
+              <p>
+                "Whenever you see a blank flanked by a semicolon (;) or colon (:), remember that the second half <em>explains or mirrors</em> the first half! If you see 'despite' or 'although', immediately invert the polarity. If clause 1 is positive, clause 2 MUST be negative."
+              </p>
+            </div>
+          </div>
+
+          <!-- Card 2: Para-Jumbles Framework -->
+          <div class="concept-card">
+            <div class="card-top">
+              <span class="card-icon">🧩</span>
+              <div class="card-title-group">
+                <h3>Para-Jumbles: 7 Master Strategies</h3>
+                <span class="card-tag">Rearrangement Blueprint</span>
+              </div>
+            </div>
+            <p class="concept-intro">
+              Para-jumbles test your ability to reconstruct logical discourse. Look out for the two primary varieties tested in campus recruitment:
+            </p>
+
+            <div class="jumble-types-row">
+              <div class="jumble-type-badge">
+                <strong>Moving Jumbles:</strong> Sentences are free-floating with no fixed or anchor sentences. (e.g. A, B, C, D)
+              </div>
+              <div class="jumble-type-badge">
+                <strong>Anchor Jumbles:</strong> 1 or 2 anchor sentences are anchored at the beginning or end of the paragraph.
+              </div>
+            </div>
+
+            <div class="strategies-list">
+              <div class="strategy-item">
+                <span class="strat-num">1</span>
+                <div>
+                  <strong>Find the Opening Sentence:</strong>
+                  <span>Look for a standalone independent sentence introducing the core subject, person, or theme. Avoid opening with pronouns (he, she, they, this).</span>
+                </div>
+              </div>
+              <div class="strategy-item">
+                <span class="strat-num">2</span>
+                <div>
+                  <strong>Identify Logical Pairs to Eliminate Options:</strong>
+                  <span>Pair mandatory two-sentence combinations (e.g. cause and its immediate effect, question and answer). Then eliminate any choice lacking that pair.</span>
+                </div>
+              </div>
+              <div class="strategy-item">
+                <span class="strat-num">3</span>
+                <div>
+                  <strong>Take Cues from Signpost Words:</strong>
+                  <span>Connectors like <em>'however', 'furthermore', 'as a result', 'meanwhile'</em> establish chronological and logical progression.</span>
+                </div>
+              </div>
+              <div class="strategy-item">
+                <span class="strat-num">4</span>
+                <div>
+                  <strong>Match Pronouns with Antecedents:</strong>
+                  <span>A proper noun always precedes its pronoun (e.g. <em>'Sachin Tendulkar'</em> must come before <em>'he'</em>).</span>
+                </div>
+              </div>
+              <div class="strategy-item">
+                <span class="strat-num">5</span>
+                <div>
+                  <strong>Look for Action Sequences:</strong>
+                  <span>Reconstruct physical or temporal sequences (e.g. criminal nabbed → admitted to trial → awarded capital punishment).</span>
+                </div>
+              </div>
+              <div class="strategy-item">
+                <span class="strat-num">6</span>
+                <div>
+                  <strong>Seek Generic to Specific Transitions:</strong>
+                  <span>Broad global trends or general categories precede specific cases, individuals, or exceptions.</span>
+                </div>
+              </div>
+              <div class="strategy-item">
+                <span class="strat-num">7</span>
+                <div>
+                  <strong>Clues about Abbreviations & Name Expansion:</strong>
+                  <span>Full names or expanded acronyms (e.g. <em>'United States Navy (USN)'</em>) come before abbreviated references (e.g. <em>'the Navy'</em> or <em>'USN'</em>).</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mentor Kapil Callout -->
+            <div class="mentor-tip-callout">
+              <div class="mentor-tip-header">
+                <img src="assets/kapil_avatar.png" alt="Kapil Tip" class="tip-avatar">
+                <div>
+                  <strong>Kapil's Elimination Formula:</strong>
+                  <span class="tip-role">FACE Prep Hack</span>
+                </div>
+              </div>
+              <p>
+                "In 90% of TCS and Infosys Para-jumbles, finding just ONE mandatory pair (like B-C) allows you to strike off 3 out of 4 options in under 15 seconds! Never arrange all 4 from scratch."
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-footer-center">
+          <button class="btn btn-primary btn-lg" onclick="switchTab('tab-drills')">
+            <span>Proceed to Level 2: Proactive Drills</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= LEVEL 2: PROACTIVE DRILLS ================= -->
+      <section id="tab-drills" class="tab-pane">
+        <div class="section-header">
+          <div class="badge-chip">Level 2 • Practice Drills</div>
+          <h2>Proactive Fill-in-the-Blanks & Grammar Analysis</h2>
+          <p class="section-desc">Page 1 Worksheet Drills: Predict the words proactively, determine grammatical parts of speech, and reconstruct Rahul's day timeline.</p>
+        </div>
+
+        <!-- Section 2A: Proactive Blanks (Q1 to Q10) -->
+        <div class="drill-section-block">
+          <div class="block-title-row">
+            <div class="title-with-badge">
+              <span class="num-circle">A</span>
+              <h3>Drill: Fill These Blanks Proactively (Questions 1 to 10)</h3>
+            </div>
+            <span class="xp-badge">+50 XP per question</span>
+          </div>
+          <p class="block-instruction">Read the sentence, observe the structural clues & signposts, predict the meaning, then choose or test the best proactive fit!</p>
+
+          <div class="drill-cards-container" id="proactiveDrillContainer">
+            <!-- Dynamically populated from JS with 10 questions -->
+          </div>
+        </div>
+
+        <!-- Section 2B: Parts of Speech Identification (Q1 to Q5) -->
+        <div class="drill-section-block">
+          <div class="block-title-row">
+            <div class="title-with-badge">
+              <span class="num-circle">B</span>
+              <h3>Grammar Drill: Which Part of Speech Would You Need? (Questions 1 to 5)</h3>
+            </div>
+            <span class="xp-badge">+50 XP per question</span>
+          </div>
+          <p class="block-instruction">Analyze sentence syntax: Is the missing slot a Noun, Pronoun, Verb, Adjective, or Adverb?</p>
+
+          <div class="drill-cards-container" id="posDrillContainer">
+            <!-- Dynamically populated from JS with 5 questions -->
+          </div>
+        </div>
+
+        <!-- Section 2C: Rahul's Day Chronological Ordering Drill -->
+        <div class="drill-section-block highlight-section">
+          <div class="block-title-row">
+            <div class="title-with-badge">
+              <span class="num-circle">C</span>
+              <h3>Story Sequence Drill: Order Rahul's Daily Routine (Page 1 & 2 Transition)</h3>
+            </div>
+            <span class="xp-badge">+150 XP Mastery Reward</span>
+          </div>
+          <p class="block-instruction">Arrange Rahul's 9 narrative events into the correct chronological order from morning dawn to late night. Tap an item or use the Up/Down buttons to adjust sequence.</p>
+
+          <div class="timeline-sorter-wrap">
+            <div class="timeline-items-list" id="rahulTimelineList">
+              <!-- Dynamically populated with 9 sentences -->
+            </div>
+            <div class="timeline-controls">
+              <button class="btn btn-secondary" onclick="resetRahulTimeline()">↺ Reset Sequence</button>
+              <button class="btn btn-primary" onclick="checkRahulTimeline()">
+                <span>Verify Chronological Order</span>
+                <span>✓</span>
+              </button>
+            </div>
+            <div id="rahulFeedback" class="timeline-feedback hidden"></div>
+          </div>
+        </div>
+
+        <div class="action-footer-center">
+          <button class="btn btn-primary btn-lg" onclick="switchTab('tab-sentences')">
+            <span>Proceed to Level 3: Sentence Battles</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= LEVEL 3: SENTENCE BATTLES ================= -->
+      <section id="tab-sentences" class="tab-pane">
+        <div class="section-header">
+          <div class="badge-chip">Level 3 • Sentence Completion</div>
+          <h2>Sentence Completion Battle: Practice & Concept Review</h2>
+          <p class="section-desc">Contains Page 1 Questions (1 to 4) + Page 2 Concept Review Questions (1 to 10). Master signposts, root words, and vocabulary.</p>
+        </div>
+
+        <!-- Part 1: Page 1 Questions 1 to 4 -->
+        <div class="drill-section-block">
+          <div class="block-title-row">
+            <div class="title-with-badge">
+              <span class="num-circle">1</span>
+              <h3>Page 1 Practice: Complete the Sentence with Correct Answer (Questions 1 to 4)</h3>
+            </div>
+            <span class="xp-badge">+60 XP Each</span>
+          </div>
+
+          <div class="quiz-items-container" id="sentencePage1Container">
+            <!-- Dynamically rendered -->
+          </div>
+        </div>
+
+        <!-- Part 2: Page 2 Concept Review Questions 1 to 10 -->
+        <div class="drill-section-block">
+          <div class="block-title-row">
+            <div class="title-with-badge">
+              <span class="num-circle">2</span>
+              <h3>Page 2 Concept Review: Choose the Most Logical Fit for Each Blank (Questions 1 to 10)</h3>
+            </div>
+            <span class="xp-badge">+60 XP Each</span>
+          </div>
+
+          <div class="quiz-items-container" id="sentencePage2Container">
+            <!-- Dynamically rendered -->
+          </div>
+        </div>
+
+        <div class="action-footer-center">
+          <button class="btn btn-primary btn-lg" onclick="switchTab('tab-parajumbles')">
+            <span>Proceed to Level 4: Para-Jumble Arena</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= LEVEL 4: PARA-JUMBLES ARENA ================= -->
+      <section id="tab-parajumbles" class="tab-pane">
+        <div class="section-header">
+          <div class="badge-chip">Level 4 • Logical Discourse</div>
+          <h2>Para-Jumble Arena: Strategies & Advanced Permutations</h2>
+          <p class="section-desc">Covers Page 1 Questions 1 to 5 (Arranging and identifying the exact strategy used) + Page 2 & 3 Questions 11 to 20.</p>
+        </div>
+
+        <!-- Page 1 Para-Jumbles (With strategy identification) -->
+        <div class="drill-section-block">
+          <div class="block-title-row">
+            <div class="title-with-badge">
+              <span class="num-circle">A</span>
+              <h3>Page 1 Para-Jumbles: Arrange & Name the Strategy (Questions 1 to 5)</h3>
+            </div>
+            <span class="xp-badge">+80 XP Each</span>
+          </div>
+          <p class="block-instruction">For each set, select the coherent order AND choose the specific FACE Prep strategy used to crack it!</p>
+
+          <div class="quiz-items-container" id="parajumblesPage1Container">
+            <!-- Dynamically rendered -->
+          </div>
+        </div>
+
+        <!-- Page 2 & 3 Questions 11 to 20 -->
+        <div class="drill-section-block">
+          <div class="block-title-row">
+            <div class="title-with-badge">
+              <span class="num-circle">B</span>
+              <h3>Page 2 & 3 Fragment Rearrangement: Questions 11 to 20</h3>
+            </div>
+            <span class="xp-badge">+80 XP Each</span>
+          </div>
+          <p class="block-instruction">Select the arrangement of each set of fragments/sentences that would make them into a coherent paragraph.</p>
+
+          <div class="quiz-items-container" id="parajumblesPage2Container">
+            <!-- Dynamically rendered -->
+          </div>
+        </div>
+
+        <div class="action-footer-center">
+          <button class="btn btn-primary btn-lg" onclick="switchTab('tab-cloze')">
+            <span>Proceed to Level 5: Passage Cloze</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= LEVEL 5: PASSAGE CLOZE ================= -->
+      <section id="tab-cloze" class="tab-pane">
+        <div class="section-header">
+          <div class="badge-chip">Level 5 • Comprehensive Cloze Test</div>
+          <h2>Passage Cloze Test: Logical Links in Connected Discourse</h2>
+          <p class="section-desc">Page 3 Questions 21 to 25: Master cohesive ties, scientific terminology, and logical transitions.</p>
+        </div>
+
+        <div class="cloze-wrapper-card">
+          <div class="passage-display-box">
+            <div class="passage-badge">Directions for Questions 21 to 25: Fill in the blanks with logical links</div>
+            <p class="passage-text">
+              "We can appreciate the importance of Chemistry if we understand what chemistry is. It is an experimental science which has the task of 
+              <span class="cloze-blank-pill" id="blankSlot21" onclick="focusCloze(21)">[21: _______]</span> 
+              the materials out of which the things in the universe are made. Analyses have 
+              <span class="cloze-blank-pill" id="blankSlot22" onclick="focusCloze(22)">[22: _______]</span> 
+              things to be composed of elements aggregated in different 
+              <span class="cloze-blank-pill" id="blankSlot23" onclick="focusCloze(23)">[23: _______]</span>. 
+              Millions of 
+              <span class="cloze-blank-pill" id="blankSlot24" onclick="focusCloze(24)">[24: _______]</span> 
+              which are used in our daily life are prepared with only a few dozen elements. Even the 
+              <span class="cloze-blank-pill" id="blankSlot25" onclick="focusCloze(25)">[25: _______]</span> 
+              molecule does not contain more than four or five types of elements."
+            </p>
+          </div>
+
+          <!-- Cloze Questions 21 to 25 Cards -->
+          <div class="cloze-questions-grid" id="clozeQuestionsContainer">
+            <!-- Dynamically rendered -->
+          </div>
+        </div>
+
+        <div class="action-footer-center">
+          <button class="btn btn-primary btn-lg" onclick="switchTab('tab-certificate')">
+            <span>Claim Your Certificate of Completion</span>
+            <span class="btn-arrow">🏆</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= LEVEL 6: CERTIFICATE ================= -->
+      <section id="tab-certificate" class="tab-pane">
+        <div class="section-header text-center">
+          <div class="badge-chip gold-chip">Level 6 • Official Recognition</div>
+          <h2>Official Certificate of Placement Readiness</h2>
+          <p class="section-desc">Issued by Focus Academy for Career Enhancement (FACE Prep) and Mentor Kapil.</p>
+        </div>
+
+        <div class="certificate-meta-actions">
+          <div class="learner-cert-name-input-row">
+            <label for="certCustomName">Name on Certificate:</label>
+            <input type="text" id="certCustomName" placeholder="Enter Full Name..." oninput="updateCertName(this.value)">
+            <button class="btn btn-secondary" onclick="refreshCert()">Update</button>
+          </div>
+          <div class="cert-btn-group">
+            <button class="btn btn-primary" onclick="downloadCertificatePNG()">
+              <span>📥 Download Certificate (PNG)</span>
+            </button>
+            <button class="btn btn-secondary" onclick="window.print()">
+              <span>🖨️ Print / Save as PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- The Certificate Canvas / DOM Element -->
+        <div class="certificate-viewport">
+          <div class="certificate-frame" id="certificateNode">
+            <div class="cert-corner top-left"></div>
+            <div class="cert-corner top-right"></div>
+            <div class="cert-corner bottom-left"></div>
+            <div class="cert-corner bottom-right"></div>
+
+            <div class="cert-inner-border">
+              <!-- Top Branding Header -->
+              <div class="cert-header">
+                <div class="cert-brand-left">
+                  <img src="assets/faceprep_logo.png" alt="FACE Prep" class="cert-logo">
+                  <div class="cert-company-tagline">One of India's Largest Skill Development Company</div>
+                </div>
+                <div class="cert-seal-badge">
+                  <div class="seal-icon">★</div>
+                  <span>VERIFIED<br>PLACEMENT READY</span>
+                </div>
+              </div>
+
+              <!-- Title Block -->
+              <div class="cert-title-block">
+                <div class="cert-kicker">JIET • CERTIFICATE OF VERBAL APTITUDE & REASONING EXCELLENCE</div>
+                <h1 class="cert-main-title">JIET Placement Readiness Mentorship</h1>
+                <div class="cert-program-subtitle">Mentorship With Kapil • Powered By FACE Prep • Module: CPCV13-05M</div>
+              </div>
+
+              <!-- Recipient Block -->
+              <div class="cert-recipient-block">
+                <div class="cert-presented-text">This is proudly awarded to</div>
+                <div class="cert-recipient-name" id="certRecipientName">YOUR FULL NAME</div>
+                <p class="cert-achievement-text">
+                  for demonstrating outstanding competence, analytical reasoning, and mastery over sentence completion signposts, root-word semantics, and paragraph jumbles under the official JIET placement mentorship program with Kapil powered by FACE Prep.
+                </p>
+              </div>
+
+              <!-- Performance Stats Strip -->
+              <div class="cert-stats-strip">
+                <div class="cert-stat">
+                  <span class="cert-stat-label">Total Score / XP</span>
+                  <strong class="cert-stat-val" id="certScoreXP">1,250 XP</strong>
+                </div>
+                <div class="cert-stat">
+                  <span class="cert-stat-label">Mastery Badges</span>
+                  <strong class="cert-stat-val" id="certBadgesEarned">8 of 8 Unlocked</strong>
+                </div>
+                <div class="cert-stat">
+                  <span class="cert-stat-label">Curriculum Code</span>
+                  <strong class="cert-stat-val">JIET / CPCV13-05M</strong>
+                </div>
+                <div class="cert-stat">
+                  <span class="cert-stat-label">Credential Verification ID</span>
+                  <strong class="cert-stat-val" id="certVerificationId">JIET-KAPIL-2026-9842</strong>
+                </div>
+              </div>
+
+              <!-- Signatures & Authority -->
+              <div class="cert-footer">
+                <div class="cert-sign-col">
+                  <div class="cert-signature-line script-font">Kapil</div>
+                  <div class="cert-sign-name">Kapil</div>
+                  <div class="cert-sign-role">Mentorship By Kapil<br>Powered By FACE Prep</div>
+                </div>
+
+                <div class="cert-mentor-badge-col">
+                  <img src="assets/kapil_avatar.png" alt="Kapil Portrait" class="cert-mentor-portrait">
+                  <span class="cert-mentor-caption">Mentorship By Kapil</span>
+                </div>
+
+                <div class="cert-sign-col right-align">
+                  <div class="cert-signature-line script-font">FACE Prep</div>
+                  <div class="cert-sign-name">FACE Prep</div>
+                  <div class="cert-sign-role">Focus Academy for Career Enhancement<br>Date: <span id="certDateDisplay">17 November 2026</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav">
+      <button class="mobile-nav-btn active" data-tab="tab-concepts">
+        <span class="m-icon">📖</span>
+        <span class="m-label">Concepts</span>
+      </button>
+      <button class="mobile-nav-btn" data-tab="tab-drills">
+        <span class="m-icon">🎯</span>
+        <span class="m-label">Drills</span>
+      </button>
+      <button class="mobile-nav-btn" data-tab="tab-sentences">
+        <span class="m-icon">✍️</span>
+        <span class="m-label">Sentences</span>
+      </button>
+      <button class="mobile-nav-btn" data-tab="tab-parajumbles">
+        <span class="m-icon">🧩</span>
+        <span class="m-label">Jumbles</span>
+      </button>
+      <button class="mobile-nav-btn" data-tab="tab-cloze">
+        <span class="m-icon">🧪</span>
+        <span class="m-label">Cloze</span>
+      </button>
+      <button class="mobile-nav-btn" data-tab="tab-certificate">
+        <span class="m-icon">🏆</span>
+        <span class="m-label">Certificate</span>
+      </button>
+    </nav>
+
+    <!-- Badges Modal -->
+    <div id="badgesModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-title-icon">🏅</span>
+            <h3>Placement Readiness Badges</h3>
+          </div>
+          <button class="modal-close-btn" onclick="closeBadgesModal()">×</button>
+        </div>
+        <div class="badges-grid-modal" id="badgesModalGrid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Onboarding Name Modal -->
+    <div id="onboardingModal" class="modal-overlay">
+      <div class="modal-card onboarding-card">
+        <div class="onboarding-avatar-wrap">
+          <img src="assets/kapil_avatar.png" alt="Kapil Mentor" class="onboarding-avatar">
+          <div class="welcome-speech-bubble">
+            <strong>Welcome to Placement Readiness Mentorship!</strong>
+            <p>I am Kapil. Welcome to Placement Readiness Mentorship Powered By FACE Prep. Let's begin your placement journey!</p>
+          </div>
+        </div>
+
+        <div class="onboarding-form">
+          <label for="learnerInputName" class="form-label">Enter Your Full Name for Certifications & Rewards:</label>
+          <input type="text" id="learnerInputName" class="form-input" placeholder="e.g. Rahul Sharma" autofocus>
+          <button class="btn btn-primary btn-block btn-lg" onclick="startJourney()">
+            <span>Begin Placement Mentorship</span>
+            <span>⚡</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confetti Canvas for Gamification -->
+    <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+    <!-- Floating XP & Alert Toast -->
+    <div id="toastNotification" class="toast-popup hidden"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
