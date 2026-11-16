@@ -1,4 +1,4 @@
-const CACHE_NAME = 'faceprep-kapil-v1';
+const CACHE_NAME = 'jiet-kapil-placement-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,9 @@ const ASSETS = [
   './manifest.json',
   './assets/kapil_faceprep_banner.png',
   './assets/kapil_avatar.png',
-  './assets/faceprep_logo.png'
+  './assets/faceprep_logo.png',
+  './assets/icon-192.png',
+  './assets/icon-512.png'
 ];
 
 self.addEventListener('install', (e) => {
