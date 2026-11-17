@@ -555,6 +555,200 @@ body {
 }
 
 /* ==========================================================================
+   FOUNDATIONS PRIMER: WHAT & WHY DEFINITIONS
+   ========================================================================== */
+.foundations-primer-card {
+  background: #FFFFFF;
+  border: 1.5px solid #FFEDD5;
+  border-radius: var(--radius-lg);
+  padding: 24px 26px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.foundations-primer-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: var(--face-orange);
+}
+
+.primer-header-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.primer-header-icon {
+  font-size: 2rem;
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
+  border-radius: var(--radius-md);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.primer-title-wrap h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.primer-subtitle {
+  font-size: 0.85rem;
+  color: var(--face-orange);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.primer-intro-text {
+  font-size: 0.92rem;
+  color: #334155;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.primer-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .primer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1100px) {
+  .primer-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.primer-card {
+  background: #F8FAFC;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.primer-card:hover {
+  background: #FFFFFF;
+  border-color: var(--face-orange);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.primer-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.primer-card-icon {
+  font-size: 1.4rem;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.primer-card-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.primer-block-what {
+  font-size: 0.86rem;
+  color: #1E293B;
+  line-height: 1.5;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.primer-block-what strong {
+  color: var(--face-orange);
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  letter-spacing: 0.05em;
+}
+
+.primer-block-why {
+  font-size: 0.84rem;
+  color: #334155;
+  line-height: 1.5;
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.primer-block-why strong {
+  color: #C2410C;
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  letter-spacing: 0.05em;
+}
+
+.primer-formula-tag {
+  background: #F1F5F9;
+  border: 1px dashed #CBD5E1;
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.primer-formula-tag strong {
+  color: var(--text-dark);
+}
+
+.section-why-callout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  margin-bottom: 18px;
+  font-size: 0.85rem;
+  color: #9A3412;
+  font-weight: 600;
+}
+
+.section-why-callout strong {
+  color: #C2410C;
+  font-weight: 800;
+}
+
+/* ==========================================================================
    CONCEPTS GRID (LEVEL 1)
    ========================================================================== */
 .concepts-grid {
