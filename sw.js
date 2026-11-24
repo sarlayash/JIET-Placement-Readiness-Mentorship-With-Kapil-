@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jiet-kapil-placement-v4';
+const CACHE_NAME = 'jiet-kapil-placement-v5';
 const APP_SHELL = [
   './',
   './index.html',
@@ -42,10 +42,14 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
-        .then((response) => {
+        .then(async (response) => {
           if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
+            try {
+              const cache = await caches.open(CACHE_NAME);
+              await cache.put('./index.html', response.clone());
+            } catch (error) {
+              // A cache quota issue should not turn a successful online page load into a failure.
+            }
           }
           return response;
         })
@@ -58,10 +62,14 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
-      return fetch(request).then((response) => {
+      return fetch(request).then(async (response) => {
         if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(request, response.clone());
+          } catch (error) {
+            // Keep serving the network response if the browser declines to cache it.
+          }
         }
         return response;
       });

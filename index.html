@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>JIET Placement Readiness Mentorship With Kapil | Powered by FACE Prep</title>
   <meta name="description" content="Build placement readiness with JIET: verbal, quantitative and logical aptitude, workplace communication, soft skills, assessments, badges, and certificates.">
   <meta name="theme-color" content="#FF5500">
@@ -77,7 +77,7 @@
       </div>
 
       <!-- Overall Global Level Progress Bar -->
-      <div class="global-progress-track">
+      <div class="global-progress-track" role="progressbar" aria-label="Overall placement readiness progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5">
         <div class="global-progress-fill" id="globalProgressFill" style="width: 5%;"></div>
       </div>
     </header>
@@ -107,7 +107,7 @@
     </section>
 
     <!-- Navigation Tabs / Level Stepper -->
-    <nav class="level-nav-bar" id="levelNavBar">
+    <nav class="level-nav-bar" id="levelNavBar" aria-label="Learning modules">
       <button class="nav-tab active" data-tab="tab-concepts">
         <span class="tab-icon">📖</span>
         <span class="tab-text">1. Concept Mastery</span>
@@ -696,16 +696,16 @@
           <div class="passage-display-box">
             <div class="passage-badge">Directions for Questions 21 to 25: Fill in the blanks with logical links</div>
             <p class="passage-text">
-              "We can appreciate the importance of Chemistry if we understand what chemistry is. It is an experimental science which has the task of 
-              <span class="cloze-blank-pill" id="blankSlot21" onclick="focusCloze(21)">[21: _______]</span> 
-              the materials out of which the things in the universe are made. Analyses have 
-              <span class="cloze-blank-pill" id="blankSlot22" onclick="focusCloze(22)">[22: _______]</span> 
-              things to be composed of elements aggregated in different 
-              <span class="cloze-blank-pill" id="blankSlot23" onclick="focusCloze(23)">[23: _______]</span>. 
-              Millions of 
-              <span class="cloze-blank-pill" id="blankSlot24" onclick="focusCloze(24)">[24: _______]</span> 
-              which are used in our daily life are prepared with only a few dozen elements. Even the 
-              <span class="cloze-blank-pill" id="blankSlot25" onclick="focusCloze(25)">[25: _______]</span> 
+              "We can appreciate the importance of Chemistry if we understand what chemistry is. It is an experimental science which has the task of
+              <button type="button" class="cloze-blank-pill" id="blankSlot21" aria-label="Go to cloze question 21" onclick="focusCloze(21)">[21: _______]</button>
+              the materials out of which the things in the universe are made. Analyses have
+              <button type="button" class="cloze-blank-pill" id="blankSlot22" aria-label="Go to cloze question 22" onclick="focusCloze(22)">[22: _______]</button>
+              things to be composed of elements aggregated in different
+              <button type="button" class="cloze-blank-pill" id="blankSlot23" aria-label="Go to cloze question 23" onclick="focusCloze(23)">[23: _______]</button>.
+              Millions of
+              <button type="button" class="cloze-blank-pill" id="blankSlot24" aria-label="Go to cloze question 24" onclick="focusCloze(24)">[24: _______]</button>
+              which are used in our daily life are prepared with only a few dozen elements. Even the
+              <button type="button" class="cloze-blank-pill" id="blankSlot25" aria-label="Go to cloze question 25" onclick="focusCloze(25)">[25: _______]</button>
               molecule does not contain more than four or five types of elements."
             </p>
           </div>
@@ -817,7 +817,7 @@
         <div class="certificate-meta-actions">
           <div class="learner-cert-name-input-row">
             <label for="certCustomName">Name on Certificate:</label>
-            <input type="text" id="certCustomName" placeholder="Enter Full Name..." oninput="updateCertName(this.value)">
+          <input type="text" id="certCustomName" maxlength="80" placeholder="Enter Full Name..." oninput="updateCertName(this.value)">
             <button class="btn btn-secondary" onclick="refreshCert()">Update</button>
             <button class="btn btn-secondary" onclick="openProfileModal()" title="Switch learner or reset">👤 Switch / Reset</button>
           </div>
@@ -848,7 +848,7 @@
                 </div>
                 <div class="cert-seal-badge">
                   <div class="seal-icon">★</div>
-                  <span>VERIFIED<br>PLACEMENT READY</span>
+                  <span>CAREER<br>READINESS</span>
                 </div>
               </div>
 
@@ -883,7 +883,7 @@
                   <strong class="cert-stat-val">JIET / CAREER READINESS</strong>
                 </div>
                 <div class="cert-stat">
-                  <span class="cert-stat-label">Credential Verification ID</span>
+                  <span class="cert-stat-label">Certificate ID</span>
                   <strong class="cert-stat-val" id="certVerificationId">JIET-KAPIL-2026-9842</strong>
                 </div>
               </div>
@@ -916,7 +916,7 @@
     </main>
 
     <!-- Mobile Bottom Navigation Bar -->
-    <nav class="mobile-bottom-nav">
+    <nav class="mobile-bottom-nav" aria-label="Learning modules, mobile navigation">
       <button class="mobile-nav-btn active" data-tab="tab-concepts">
         <span class="m-icon">📖</span>
         <span class="m-label">Concepts</span>
@@ -956,12 +956,12 @@
     </nav>
 
     <!-- Badges Modal -->
-    <div id="badgesModal" class="modal-overlay hidden">
+    <div id="badgesModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="badgesModalTitle">
       <div class="modal-card">
         <div class="modal-header">
           <div class="modal-title-wrap">
             <span class="modal-title-icon">🏅</span>
-            <h3>Placement Readiness Badges</h3>
+            <h3 id="badgesModalTitle">Placement Readiness Badges</h3>
           </div>
           <button class="modal-close-btn" onclick="closeBadgesModal()">×</button>
         </div>
@@ -972,19 +972,19 @@
     </div>
 
     <!-- Onboarding Name Modal -->
-    <div id="onboardingModal" class="modal-overlay">
+    <div id="onboardingModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
       <div class="modal-card onboarding-card">
         <div class="onboarding-avatar-wrap">
           <img src="assets/kapil_avatar.png" alt="Kapil Mentor" class="onboarding-avatar">
           <div class="welcome-speech-bubble">
-            <strong>Welcome to Placement Readiness Mentorship!</strong>
+            <strong id="onboardingTitle">Welcome to Placement Readiness Mentorship!</strong>
             <p>I am Kapil. Welcome to Placement Readiness Mentorship Powered By FACE Prep. Let's begin your placement journey!</p>
           </div>
         </div>
 
         <div class="onboarding-form">
           <label for="learnerInputName" class="form-label">Enter Your Full Name for Certifications & Rewards:</label>
-          <input type="text" id="learnerInputName" class="form-input" placeholder="e.g. Rahul Sharma" autofocus>
+          <input type="text" id="learnerInputName" class="form-input" maxlength="80" autocomplete="name" placeholder="e.g. Rahul Sharma" autofocus>
           <button class="btn btn-primary btn-block btn-lg" onclick="startJourney()">
             <span>Begin Placement Mentorship</span>
             <span>⚡</span>
@@ -994,12 +994,12 @@
     </div>
 
     <!-- Profile & Settings Modal (Log Off & Reset) -->
-    <div id="profileModal" class="modal-overlay hidden">
+    <div id="profileModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
       <div class="modal-card profile-settings-card">
         <div class="modal-header">
           <div class="modal-title-wrap">
             <span class="modal-title-icon">👤</span>
-            <h3>Learner Profile & Settings</h3>
+            <h3 id="profileModalTitle">Learner Profile & Settings</h3>
           </div>
           <button class="modal-close-btn" onclick="closeProfileModal()">×</button>
         </div>
@@ -1021,7 +1021,7 @@
           <div class="profile-edit-name-group">
             <label for="profileInputRename">Change / Update Student Name:</label>
             <div class="rename-input-wrap">
-              <input type="text" id="profileInputRename" class="form-input" placeholder="Enter Full Name...">
+              <input type="text" id="profileInputRename" class="form-input" maxlength="80" autocomplete="name" placeholder="Enter Full Name...">
               <button class="btn btn-secondary" onclick="saveNewNameFromProfile()">Save</button>
             </div>
           </div>
@@ -1048,7 +1048,7 @@
     <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
 
     <!-- Floating XP & Alert Toast -->
-    <div id="toastNotification" class="toast-popup hidden"></div>
+    <div id="toastNotification" class="toast-popup hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
   </div>
 

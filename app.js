@@ -13,11 +13,18 @@ const state = {
   streak: 0,
   level: 1,
   soundEnabled: true,
+  certificateId: '',
   unlockedBadges: new Set(),
   answeredQuestions: {}, // { qId: { correct: bool, choice: string } }
   activeTab: 'tab-concepts',
-  rahulOrder: [1, 2, 3, 4, 5, 6, 7, 8, 9] // 1-based indices of the 9 events
+  rahulOrder: [5, 1, 8, 3, 7, 2, 9, 4, 6] // start scrambled so the timeline cannot be claimed untouched
 };
+
+const LEGACY_STATE_KEY = 'faceprep_kapil_placement_state';
+const PROFILES_STORAGE_KEY = 'faceprep_kapil_placement_profiles';
+const ACTIVE_PROFILE_STORAGE_KEY = 'faceprep_kapil_active_profile';
+let learnerProfiles = {};
+let activeProfileId = null;
 
 // Placement readiness badges across verbal, aptitude, communication, and workplace skills
 const BADGES_CONFIG = [
@@ -28,7 +35,7 @@ const BADGES_CONFIG = [
   { id: 'sentence_ace', icon: '✍️', title: 'Sentence Architect', desc: 'Scored high on Sentence Completion Practice & Review questions.' },
   { id: 'jumble_maestro', icon: '🧩', title: 'Jumble Maestro', desc: 'Conquered complex sentence & fragment rearrangements.' },
   { id: 'cloze_master', icon: '🧪', title: 'Logic Alchemist', desc: 'Aced the Chemistry Discourse Cloze passage.' },
-  { id: 'placement_prodigy', icon: '🏆', title: 'Placement Prodigy', desc: 'Earned 1000+ XP and unlocked the Official Certificate of Mastery.' },
+  { id: 'placement_prodigy', icon: '🏆', title: 'Placement Prodigy', desc: 'Earned 1000+ XP across the placement readiness journey.' },
   { id: 'soft_skills_pro', icon: '🤝', title: 'Teamwork Pro', desc: 'Scored 80% or higher on the Soft Skills assessment.' },
   { id: 'communication_ace', icon: '💬', title: 'Communication Ace', desc: 'Scored 80% or higher on the Professional Communication assessment.' },
   { id: 'quant_master', icon: '➗', title: 'Quant Master', desc: 'Scored 75% or higher on the Quantitative Aptitude assessment.' },
@@ -952,38 +959,166 @@ const CLOZE_QUESTIONS = [
 // ==========================================
 // 3. GAMIFICATION & LOCAL STORAGE
 // ==========================================
+function normalizeProfileId(name) {
+  return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+}
+
+function generateCertificateId() {
+  const bytes = new Uint8Array(8);
+  if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+  else for (let index = 0; index < bytes.length; index++) bytes[index] = Math.floor(Math.random() * 256);
+  const suffix = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return `JIET-${new Date().getFullYear()}-${suffix}`;
+}
+
+function createFreshLearnerState(name = 'Learner') {
+  state.learnerName = name;
+  state.xp = 0;
+  state.streak = 0;
+  state.level = 1;
+  state.activeTab = 'tab-concepts';
+  state.certificateId = generateCertificateId();
+  state.unlockedBadges = new Set();
+  state.answeredQuestions = {};
+  state.rahulOrder = [5, 1, 8, 3, 7, 2, 9, 4, 6];
+}
+
+function sanitizeLearnerState(data, fallbackName = 'Learner') {
+  const safeData = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  const xpValue = Number(safeData.xp);
+  const xp = Number.isFinite(xpValue) ? Math.max(0, Math.floor(xpValue)) : 0;
+  const allowedBadgeIds = new Set(BADGES_CONFIG.map(badge => badge.id));
+  const badges = Array.isArray(safeData.unlockedBadges)
+    ? safeData.unlockedBadges.filter(id => allowedBadgeIds.has(id))
+    : [];
+  const knownQuestions = [
+    ...PROACTIVE_DRILLS, ...POS_DRILLS, ...SENTENCE_PAGE_1, ...SENTENCE_PAGE_2,
+    ...PARAJUMBLES_PAGE_1, ...PARAJUMBLES_PAGE_2_3, ...CLOZE_QUESTIONS,
+    ...CAREER_ASSESSMENTS.softSkills, ...CAREER_ASSESSMENTS.communication,
+    ...APTITUDE_QUESTIONS
+  ];
+  const knownQuestionIds = new Set([...knownQuestions.map(question => question.id), 'rahul_timeline']);
+  const answers = safeData.answeredQuestions && typeof safeData.answeredQuestions === 'object' && !Array.isArray(safeData.answeredQuestions)
+    ? Object.fromEntries(Object.entries(safeData.answeredQuestions).filter(([id, answer]) =>
+      knownQuestionIds.has(id) && answer && typeof answer.correct === 'boolean'
+    ))
+    : {};
+  const order = Array.isArray(safeData.rahulOrder) && safeData.rahulOrder.length === 9 &&
+    new Set(safeData.rahulOrder).size === 9 && safeData.rahulOrder.every(id => Number.isInteger(id) && id >= 1 && id <= 9)
+    ? safeData.rahulOrder
+    : [5, 1, 8, 3, 7, 2, 9, 4, 6];
+  const timelineAlreadyCredited = safeData.answeredQuestions?.rahul_timeline?.correct === true;
+  const safeOrder = !timelineAlreadyCredited && order.every((id, index) => id === index + 1)
+    ? [5, 1, 8, 3, 7, 2, 9, 4, 6]
+    : order;
+  const name = typeof safeData.learnerName === 'string' && safeData.learnerName.trim()
+    ? safeData.learnerName.trim().slice(0, 80)
+    : fallbackName;
+  const validTabs = new Set([
+    'tab-concepts', 'tab-drills', 'tab-sentences', 'tab-parajumbles', 'tab-cloze',
+    'tab-soft-skills', 'tab-communication', 'tab-aptitude', 'tab-certificate'
+  ]);
+
+  return {
+    learnerName: name,
+    certificateId: typeof safeData.certificateId === 'string' && /^JIET-\d{4}-[A-F0-9]{16}$/.test(safeData.certificateId)
+      ? safeData.certificateId
+      : generateCertificateId(),
+    xp,
+    streak: Number.isFinite(Number(safeData.streak)) ? Math.max(0, Math.floor(Number(safeData.streak))) : 0,
+    level: xp >= 1500 ? 5 : xp >= 1000 ? 4 : xp >= 600 ? 3 : xp >= 300 ? 2 : 1,
+    soundEnabled: typeof safeData.soundEnabled === 'boolean' ? safeData.soundEnabled : true,
+    unlockedBadges: badges,
+    answeredQuestions: answers,
+    rahulOrder: safeOrder,
+    activeTab: validTabs.has(safeData.activeTab) ? safeData.activeTab : 'tab-concepts'
+  };
+}
+
+function applyLearnerState(data, fallbackName) {
+  const safeData = sanitizeLearnerState(data, fallbackName);
+  state.learnerName = safeData.learnerName;
+  state.xp = safeData.xp;
+  state.streak = safeData.streak;
+  state.level = safeData.level;
+  state.certificateId = safeData.certificateId;
+  state.soundEnabled = safeData.soundEnabled;
+  state.unlockedBadges = new Set(safeData.unlockedBadges);
+  state.answeredQuestions = safeData.answeredQuestions;
+  state.rahulOrder = safeData.rahulOrder;
+  state.activeTab = safeData.activeTab;
+}
+
 function loadSavedState() {
   try {
-    const saved = localStorage.getItem('faceprep_kapil_placement_state');
-    if (saved) {
-      const data = JSON.parse(saved);
-      state.learnerName = data.learnerName || 'Learner';
-      state.xp = data.xp || 0;
-      state.streak = data.streak || 0;
-      state.level = data.level || 1;
-      state.soundEnabled = data.soundEnabled !== undefined ? data.soundEnabled : true;
-      state.unlockedBadges = new Set(data.unlockedBadges || ['recruit']);
-      state.answeredQuestions = data.answeredQuestions || {};
-      state.rahulOrder = data.rahulOrder || [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const savedProfiles = JSON.parse(localStorage.getItem(PROFILES_STORAGE_KEY) || '{}');
+    learnerProfiles = savedProfiles && typeof savedProfiles === 'object' && !Array.isArray(savedProfiles)
+      ? savedProfiles
+      : {};
+
+    const legacyRaw = localStorage.getItem(LEGACY_STATE_KEY);
+    let migratedLegacyState = false;
+    let migratedProfileId = null;
+    if (legacyRaw) {
+      const legacyState = sanitizeLearnerState(JSON.parse(legacyRaw));
+      const legacyProfileId = normalizeProfileId(legacyState.learnerName);
+      if (legacyState.learnerName !== 'Learner' && !learnerProfiles[legacyProfileId]) {
+        learnerProfiles[legacyProfileId] = legacyState;
+        migratedLegacyState = true;
+        migratedProfileId = legacyProfileId;
+      }
+    }
+
+    const storedActiveProfileId = localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY);
+    const isValidProfileId = (id) => id && learnerProfiles[id] && normalizeProfileId(
+      typeof learnerProfiles[id].learnerName === 'string' ? learnerProfiles[id].learnerName : ''
+    ) === id;
+    const profileId = storedActiveProfileId === ''
+      ? null
+      : isValidProfileId(storedActiveProfileId) ? storedActiveProfileId
+      : isValidProfileId(migratedProfileId) ? migratedProfileId
+      : Object.keys(learnerProfiles).find(isValidProfileId);
+    if (profileId) {
+      activeProfileId = profileId;
+      learnerProfiles[profileId] = sanitizeLearnerState(learnerProfiles[profileId]);
+      applyLearnerState(learnerProfiles[profileId]);
+      localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(learnerProfiles));
+      localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, profileId);
+    } else {
+      activeProfileId = null;
+      createFreshLearnerState();
+      if (storedActiveProfileId === null) localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, '');
+    }
+
+    if (migratedLegacyState) {
+      localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(learnerProfiles));
+      localStorage.removeItem(LEGACY_STATE_KEY);
     }
   } catch (e) {
     console.error('Failed to load state from localStorage', e);
+    learnerProfiles = {};
+    activeProfileId = null;
+    createFreshLearnerState();
   }
 }
 
 function persistState() {
+  if (!activeProfileId) return;
   try {
-    const data = {
+    learnerProfiles[activeProfileId] = {
       learnerName: state.learnerName,
       xp: state.xp,
       streak: state.streak,
       level: state.level,
       soundEnabled: state.soundEnabled,
+      certificateId: state.certificateId,
       unlockedBadges: Array.from(state.unlockedBadges),
       answeredQuestions: state.answeredQuestions,
-      rahulOrder: state.rahulOrder
+      rahulOrder: state.rahulOrder,
+      activeTab: state.activeTab
     };
-    localStorage.setItem('faceprep_kapil_placement_state', JSON.stringify(data));
+    localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(learnerProfiles));
+    localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, activeProfileId);
   } catch (e) {
     console.error('Failed to save state to localStorage', e);
   }
@@ -1025,6 +1160,11 @@ function updateCareerTrackUI() {
   });
 }
 
+function getCertificateRecipientName() {
+  const input = document.getElementById('certCustomName');
+  return (input?.value || '').trim() || state.learnerName;
+}
+
 function downloadTrackCertificate(trackId) {
   const track = CAREER_CERTIFICATES[trackId];
   if (!track) return;
@@ -1062,7 +1202,7 @@ function downloadTrackCertificate(trackId) {
   ctx.fillText('This certificate is proudly awarded to', canvas.width / 2, 430);
   ctx.fillStyle = '#FF5500';
   ctx.font = '700 54px "Cinzel", Georgia, serif';
-  ctx.fillText(state.learnerName.toUpperCase(), canvas.width / 2, 510);
+  ctx.fillText(getCertificateRecipientName().toUpperCase(), canvas.width / 2, 510);
   ctx.strokeStyle = '#D4AF37';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -1074,7 +1214,8 @@ function downloadTrackCertificate(trackId) {
   ctx.font = '22px "Plus Jakarta Sans", sans-serif';
   ctx.fillText(`has completed the ${track.title} assessment`, canvas.width / 2, 620);
   ctx.fillText(`with a score of ${result.percentage}% (${result.correct}/${result.total} correct)`, canvas.width / 2, 665);
-  ctx.fillText(`Issued ${new Date().toLocaleDateString('en-GB')}`, canvas.width / 2, 730);
+  ctx.fillText(`Certificate ID: ${state.certificateId}`, canvas.width / 2, 710);
+  ctx.fillText(`Issued ${new Date().toLocaleDateString('en-GB')}`, canvas.width / 2, 755);
   ctx.fillStyle = '#0F172A';
   ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
   ctx.fillText('Mentorship With Kapil • JIET Placement Readiness', canvas.width / 2, 825);
@@ -1093,6 +1234,8 @@ function updateHUD() {
   document.getElementById('navUserName').textContent = state.learnerName;
   document.getElementById('badgeCount').textContent = `${state.unlockedBadges.size}/${BADGE_TOTAL}`;
   document.getElementById('soundIcon').textContent = state.soundEnabled ? '🔊' : '🔇';
+  const soundButton = document.getElementById('soundToggleBtn');
+  if (soundButton) soundButton.setAttribute('aria-pressed', String(state.soundEnabled));
 
   // Global Progress percentage calculation
   const totalQuestions = PROACTIVE_DRILLS.length + POS_DRILLS.length + 1 + 
@@ -1105,16 +1248,18 @@ function updateHUD() {
   const answeredCount = Object.keys(state.answeredQuestions).length;
   const pct = Math.min(100, Math.max(5, Math.round((answeredCount / totalQuestions) * 100)));
   document.getElementById('globalProgressFill').style.width = `${pct}%`;
+  const progressTrack = document.querySelector('.global-progress-track[role="progressbar"]');
+  if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(pct));
 
   // Update Certificate dynamic fields
   const certName = document.getElementById('certRecipientName');
-  if (certName) certName.textContent = state.learnerName.toUpperCase();
-  const certInput = document.getElementById('certCustomName');
-  if (certInput && certInput.value !== state.learnerName) certInput.value = state.learnerName;
+  if (certName) certName.textContent = getCertificateRecipientName().toUpperCase();
   const certXP = document.getElementById('certScoreXP');
   if (certXP) certXP.textContent = `${state.xp.toLocaleString()} XP`;
   const certBadges = document.getElementById('certBadgesEarned');
   if (certBadges) certBadges.textContent = `${state.unlockedBadges.size} of ${BADGE_TOTAL} Unlocked`;
+  const certId = document.getElementById('certVerificationId');
+  if (certId) certId.textContent = state.certificateId || 'Created when a learner profile starts';
   const certDate = document.getElementById('certDateDisplay');
   if (certDate) {
     const now = new Date();
@@ -1331,6 +1476,37 @@ function renderMultipleChoiceList(containerId, questionList, xpPerQuestion = 50)
   });
 }
 
+function restoreClozePassage() {
+  CLOZE_QUESTIONS.forEach((question) => {
+    const savedAnswer = state.answeredQuestions[question.id];
+    if (!savedAnswer) return;
+    const slot = document.getElementById(`blankSlot${question.blankNum}`);
+    const answerText = question.options.find(option => option.key === question.answer)?.text || '';
+    if (slot) {
+      slot.innerHTML = `[${question.blankNum}: <strong>${answerText}</strong>]`;
+      slot.classList.add('solved');
+    }
+  });
+}
+
+function renderAllQuestionSets() {
+  renderMultipleChoiceList('proactiveDrillContainer', PROACTIVE_DRILLS, 50);
+  renderMultipleChoiceList('posDrillContainer', POS_DRILLS, 50);
+  renderRahulTimeline();
+  renderMultipleChoiceList('sentencePage1Container', SENTENCE_PAGE_1, 60);
+  renderMultipleChoiceList('sentencePage2Container', SENTENCE_PAGE_2, 60);
+  renderMultipleChoiceList('parajumblesPage1Container', PARAJUMBLES_PAGE_1, 80);
+  renderMultipleChoiceList('parajumblesPage2Container', PARAJUMBLES_PAGE_2_3, 80);
+  renderMultipleChoiceList('clozeQuestionsContainer', CLOZE_QUESTIONS, 70);
+  restoreClozePassage();
+  renderMultipleChoiceList('softSkillsAssessmentContainer', CAREER_ASSESSMENTS.softSkills, 25);
+  renderMultipleChoiceList('communicationAssessmentContainer', CAREER_ASSESSMENTS.communication, 25);
+  renderMultipleChoiceList('quantitativeAssessmentContainer', CAREER_ASSESSMENTS.quantitative, 25);
+  renderMultipleChoiceList('reasoningAssessmentContainer', CAREER_ASSESSMENTS.reasoning, 25);
+  renderMultipleChoiceList('dataAssessmentContainer', CAREER_ASSESSMENTS.dataInterpretation, 25);
+  renderMultipleChoiceList('spatialAssessmentContainer', CAREER_ASSESSMENTS.spatialReasoning, 25);
+}
+
 function handleOptionSelect(question, selectedKey, btnEl, cardEl, xpPerQuestion) {
   if (state.answeredQuestions[question.id]) return; // Already answered
 
@@ -1498,6 +1674,7 @@ function focusCloze(blankNum) {
 // 7. TAB & MOBILE NAVIGATION
 // ==========================================
 function switchTab(tabId) {
+  if (!document.getElementById(tabId)?.classList.contains('tab-pane')) return;
   state.activeTab = tabId;
 
   // Panes
@@ -1508,11 +1685,13 @@ function switchTab(tabId) {
   // Desktop Tabs
   document.querySelectorAll('.nav-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === tabId);
+    t.setAttribute('aria-current', t.dataset.tab === tabId ? 'page' : 'false');
   });
 
   // Mobile Bottom Nav
   document.querySelectorAll('.mobile-nav-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === tabId);
+    b.setAttribute('aria-current', b.dataset.tab === tabId ? 'page' : 'false');
   });
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1523,12 +1702,22 @@ function switchTab(tabId) {
 // ==========================================
 function startJourney() {
   const input = document.getElementById('learnerInputName');
-  const name = input ? input.value.trim() : '';
+  const name = input ? input.value.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
   if (!name) {
     alert('Please enter your full name to proceed with your certification.');
     return;
   }
+  const profileId = normalizeProfileId(name);
+  const savedProfile = learnerProfiles[profileId];
+  if (savedProfile) applyLearnerState(savedProfile, name);
+  else createFreshLearnerState(name);
+  activeProfileId = profileId;
   state.learnerName = name;
+  if (!state.certificateId) state.certificateId = generateCertificateId();
+  const certInput = document.getElementById('certCustomName');
+  if (certInput) certInput.value = name;
+  renderAllQuestionSets();
+  switchTab(state.activeTab);
   unlockBadge('recruit');
   updateHUD();
   persistState();
@@ -1540,13 +1729,8 @@ function startJourney() {
 }
 
 function updateCertName(newName) {
-  if (newName && newName.trim()) {
-    state.learnerName = newName.trim();
-    const certName = document.getElementById('certRecipientName');
-    if (certName) certName.textContent = state.learnerName.toUpperCase();
-    document.getElementById('navUserName').textContent = state.learnerName;
-    persistState();
-  }
+  const certName = document.getElementById('certRecipientName');
+  if (certName) certName.textContent = (newName.trim() || state.learnerName).toUpperCase();
 }
 
 function refreshCert() {
@@ -1610,7 +1794,7 @@ function downloadCertificatePNG() {
   // Recipient Name
   ctx.fillStyle = '#FF5500';
   ctx.font = 'bold 50px "Cinzel", Georgia, serif';
-  ctx.fillText(state.learnerName.toUpperCase(), canvas.width / 2, 400);
+  ctx.fillText(getCertificateRecipientName().toUpperCase(), canvas.width / 2, 400);
 
   // Underline
   ctx.strokeStyle = '#C28B38';
@@ -1640,7 +1824,10 @@ function downloadCertificatePNG() {
   ctx.fillText(`Total Score: ${state.xp.toLocaleString()} XP`, 280, 572);
   ctx.fillText(`Badges: ${state.unlockedBadges.size}/${BADGE_TOTAL} Unlocked`, 520, 572);
   ctx.fillText('JIET Career Readiness', 740, 572);
-  ctx.fillText(`Verified Placement Ready`, 940, 572);
+  ctx.fillText('Career Readiness', 940, 572);
+  ctx.fillStyle = '#64748B';
+  ctx.font = '14px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(`Certificate ID: ${state.certificateId || 'Not assigned'}`, canvas.width / 2, 625);
 
   // Signatures
   ctx.fillStyle = '#1E3A8A';
@@ -1688,6 +1875,18 @@ function downloadCertificatePNG() {
 // ==========================================
 // 9. BADGES MODAL
 // ==========================================
+let modalReturnFocus = null;
+
+function focusModal(modal) {
+  modalReturnFocus = document.activeElement;
+  modal.querySelector('.modal-close-btn')?.focus();
+}
+
+function restoreModalFocus() {
+  if (modalReturnFocus && typeof modalReturnFocus.focus === 'function') modalReturnFocus.focus();
+  modalReturnFocus = null;
+}
+
 function openBadgesModal() {
   const modal = document.getElementById('badgesModal');
   const grid = document.getElementById('badgesModalGrid');
@@ -1709,11 +1908,13 @@ function openBadgesModal() {
   });
 
   modal.classList.remove('hidden');
+  focusModal(modal);
 }
 
 function closeBadgesModal() {
   const modal = document.getElementById('badgesModal');
   if (modal) modal.classList.add('hidden');
+  restoreModalFocus();
 }
 
 // ==========================================
@@ -1728,18 +1929,29 @@ function openProfileModal() {
   document.getElementById('profileStatLevel').textContent = `⭐ Level ${state.level}`;
   document.getElementById('profileStatBadges').textContent = `🏅 ${state.unlockedBadges.size}/${BADGE_TOTAL} Badges`;
   modal.classList.remove('hidden');
+  focusModal(modal);
 }
 
 function closeProfileModal() {
   const modal = document.getElementById('profileModal');
   if (modal) modal.classList.add('hidden');
+  restoreModalFocus();
 }
 
 function saveNewNameFromProfile() {
   const input = document.getElementById('profileInputRename');
-  const val = input ? input.value.trim() : '';
+  const val = input ? input.value.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
   if (val) {
+    const newProfileId = normalizeProfileId(val);
+    if (newProfileId !== activeProfileId && learnerProfiles[newProfileId]) {
+      showToast('A learner profile with that name already exists. Please choose another name.');
+      return;
+    }
+    if (activeProfileId && activeProfileId !== newProfileId) delete learnerProfiles[activeProfileId];
+    activeProfileId = newProfileId;
     state.learnerName = val;
+    const certInput = document.getElementById('certCustomName');
+    if (certInput) certInput.value = val;
     updateHUD();
     persistState();
     closeProfileModal();
@@ -1751,10 +1963,16 @@ function saveNewNameFromProfile() {
 
 function handleLogoff() {
   if (confirm('Are you sure you want to log off? You can switch to another learner.')) {
-    closeProfileModal();
-    state.learnerName = 'Learner';
-    updateHUD();
     persistState();
+    closeProfileModal();
+    activeProfileId = null;
+    createFreshLearnerState();
+    try { localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, ''); } catch (e) {}
+    const certInput = document.getElementById('certCustomName');
+    if (certInput) certInput.value = '';
+    renderAllQuestionSets();
+    switchTab('tab-concepts');
+    updateHUD();
     
     // Show onboarding modal for new user
     const onboarding = document.getElementById('onboardingModal');
@@ -1769,15 +1987,13 @@ function handleLogoff() {
 function handleResetProfile() {
   if (confirm('⚠️ DANGER: Are you sure you want to completely RESET all your profile progress, earned XP, and unlocked badges? This action cannot be undone.')) {
     try {
-      localStorage.removeItem('faceprep_kapil_placement_state');
+      localStorage.removeItem(LEGACY_STATE_KEY);
+      localStorage.removeItem(PROFILES_STORAGE_KEY);
+      localStorage.removeItem(ACTIVE_PROFILE_STORAGE_KEY);
     } catch(e) {}
-    state.learnerName = 'Learner';
-    state.xp = 0;
-    state.streak = 0;
-    state.level = 1;
-    state.unlockedBadges = new Set();
-    state.answeredQuestions = {};
-    state.rahulOrder = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    learnerProfiles = {};
+    activeProfileId = null;
+    createFreshLearnerState();
     
     showToast('Profile & progress reset completely! Restarting...');
     setTimeout(() => {
@@ -1856,29 +2072,56 @@ document.addEventListener('DOMContentLoaded', () => {
     if (onboarding) onboarding.classList.add('hidden');
   }
 
-  // Render question sets
-  renderMultipleChoiceList('proactiveDrillContainer', PROACTIVE_DRILLS, 50);
-  renderMultipleChoiceList('posDrillContainer', POS_DRILLS, 50);
-  renderRahulTimeline();
-  renderMultipleChoiceList('sentencePage1Container', SENTENCE_PAGE_1, 60);
-  renderMultipleChoiceList('sentencePage2Container', SENTENCE_PAGE_2, 60);
-  renderMultipleChoiceList('parajumblesPage1Container', PARAJUMBLES_PAGE_1, 80);
-  renderMultipleChoiceList('parajumblesPage2Container', PARAJUMBLES_PAGE_2_3, 80);
-  renderMultipleChoiceList('clozeQuestionsContainer', CLOZE_QUESTIONS, 70);
-  renderMultipleChoiceList('softSkillsAssessmentContainer', CAREER_ASSESSMENTS.softSkills, 25);
-  renderMultipleChoiceList('communicationAssessmentContainer', CAREER_ASSESSMENTS.communication, 25);
-  renderMultipleChoiceList('quantitativeAssessmentContainer', CAREER_ASSESSMENTS.quantitative, 25);
-  renderMultipleChoiceList('reasoningAssessmentContainer', CAREER_ASSESSMENTS.reasoning, 25);
-  renderMultipleChoiceList('dataAssessmentContainer', CAREER_ASSESSMENTS.dataInterpretation, 25);
-  renderMultipleChoiceList('spatialAssessmentContainer', CAREER_ASSESSMENTS.spatialReasoning, 25);
+  renderAllQuestionSets();
+  const certInput = document.getElementById('certCustomName');
+  if (certInput && !certInput.value) certInput.value = state.learnerName;
 
   // Register Navigation clicks
   document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.setAttribute('aria-controls', tab.dataset.tab);
+    tab.setAttribute('aria-current', tab.classList.contains('active') ? 'page' : 'false');
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
   document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+    btn.setAttribute('aria-controls', btn.dataset.tab);
+    btn.setAttribute('aria-current', btn.classList.contains('active') ? 'page' : 'false');
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  const learnerInput = document.getElementById('learnerInputName');
+  if (learnerInput) learnerInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') startJourney();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    const openModal = ['badgesModal', 'profileModal', 'onboardingModal']
+      .map(id => document.getElementById(id))
+      .find(modal => modal && !modal.classList.contains('hidden'));
+    if (!openModal) return;
+
+    if (event.key === 'Escape') {
+      if (openModal.id === 'badgesModal') closeBadgesModal();
+      else if (openModal.id === 'profileModal') closeProfileModal();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const focusable = [...openModal.querySelectorAll('button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')]
+      .filter(element => element.getClientRects().length > 0);
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && (document.activeElement === first || !openModal.contains(document.activeElement))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !openModal.contains(document.activeElement))) {
+      event.preventDefault();
+      first.focus();
+    }
   });
 
   // Sound Toggle

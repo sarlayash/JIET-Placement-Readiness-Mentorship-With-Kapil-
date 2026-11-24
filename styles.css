@@ -1701,6 +1701,10 @@ body {
 
 .cloze-blank-pill {
   display: inline-block;
+  appearance: none;
+  font: inherit;
+  line-height: inherit;
+  vertical-align: baseline;
   background: #FFF7ED;
   border: 1.5px dashed var(--face-orange);
   color: #C2410C;
