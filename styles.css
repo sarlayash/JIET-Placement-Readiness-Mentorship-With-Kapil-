@@ -518,6 +518,94 @@ body {
   margin-bottom: 22px;
 }
 
+/* Connected-topic links follow the app's existing foundation card styling. */
+.topic-connections-card {
+  margin: 24px 0 8px;
+  padding: 20px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.topic-connections-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.topic-connections-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 12px;
+  background: #FFF7ED;
+  font-size: 1.25rem;
+}
+
+.topic-connections-kicker {
+  color: var(--face-orange);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topic-connections-heading h3 {
+  margin: 2px 0 3px;
+  color: var(--text-dark);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.topic-connections-heading p {
+  margin: 0;
+  color: #64748B;
+  font-size: 0.85rem;
+}
+
+.topic-connections-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.topic-link-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px;
+  color: inherit;
+  text-align: left;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.topic-link-card:hover, .topic-link-card:focus-visible {
+  background: #FFF7ED;
+  border-color: #FDBA74;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.topic-link-icon { font-size: 1.25rem; }
+.topic-link-copy { display: grid; gap: 3px; flex: 1; }
+.topic-link-copy strong { color: var(--text-dark); font-size: 0.85rem; }
+.topic-link-copy small { color: #64748B; font-size: 0.75rem; line-height: 1.4; }
+.topic-link-arrow { color: var(--face-orange); font-size: 1.1rem; font-weight: 800; }
+
+@media (max-width: 640px) {
+  .topic-connections-card { padding: 16px; }
+  .topic-connections-grid { grid-template-columns: 1fr; }
+}
+
 .section-header.text-center {
   text-align: center;
 }

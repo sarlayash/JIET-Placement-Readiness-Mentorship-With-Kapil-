@@ -450,6 +450,31 @@
           </div>
         </div>
 
+        <section class="topic-connections-card" aria-labelledby="topicConnectionsTitle">
+          <div class="topic-connections-heading">
+            <span class="topic-connections-icon" aria-hidden="true">🧭</span>
+            <div>
+              <span class="topic-connections-kicker">Your learning path</span>
+              <h3 id="topicConnectionsTitle">Connected Topics</h3>
+              <p>Follow how each concept connects to the next practice stage.</p>
+            </div>
+          </div>
+          <div class="topic-connections-grid">
+            <button class="topic-link-card" type="button" onclick="switchTab('tab-drills')">
+              <span class="topic-link-icon">🚦</span><span class="topic-link-copy"><strong>Signposts → Prediction</strong><small>Use support and contrast clues in proactive blanks.</small></span><span class="topic-link-arrow">→</span>
+            </button>
+            <button class="topic-link-card" type="button" onclick="switchTab('tab-sentences')">
+              <span class="topic-link-icon">🌱</span><span class="topic-link-copy"><strong>Roots → Word Choice</strong><small>Decode unfamiliar vocabulary in sentence battles.</small></span><span class="topic-link-arrow">→</span>
+            </button>
+            <button class="topic-link-card" type="button" onclick="switchTab('tab-parajumbles')">
+              <span class="topic-link-icon">🧩</span><span class="topic-link-copy"><strong>Signposts + Pronouns → Order</strong><small>Combine clues to find the flow of a paragraph.</small></span><span class="topic-link-arrow">→</span>
+            </button>
+            <button class="topic-link-card" type="button" onclick="switchTab('tab-cloze')">
+              <span class="topic-link-icon">🧪</span><span class="topic-link-copy"><strong>Context → Cloze Logic</strong><small>Apply tone, grammar, and vocabulary together.</small></span><span class="topic-link-arrow">→</span>
+            </button>
+          </div>
+        </section>
+
         <div class="action-footer-center">
           <button class="btn btn-primary btn-lg" onclick="switchTab('tab-drills')">
             <span>Proceed to Level 2: Proactive Drills</span>
