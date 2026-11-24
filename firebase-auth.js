@@ -38,7 +38,11 @@ const firebaseConfig = {
 try {
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  await setPersistence(auth, browserLocalPersistence);
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+  } catch (error) {
+    console.warn('Could not enable persistent Google sign-in in this browser; continuing with Firebase defaults.', error);
+  }
 
   let db;
   try {

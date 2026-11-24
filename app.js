@@ -41,6 +41,7 @@ let pendingFirebaseUser = null;
 let authStateVersion = 0;
 let cloudSaveTimeout = null;
 let pendingCloudRecord = null;
+let cloudHydrationPending = false;
 let learnerLockUnsubscribe = null;
 let adminDataUnsubscribe = null;
 let adminLearnerRecords = [];
@@ -1295,7 +1296,7 @@ function loadSavedState(authenticatedUser = null) {
 
 function persistState() {
   if (!activeProfileId) return;
-  state.syncUpdatedAt = Date.now();
+  const previousProfileData = learnerProfiles[activeProfileId];
   const profileData = {
     learnerName: state.learnerName,
     xp: state.xp,
@@ -1317,6 +1318,15 @@ function persistState() {
     rahulOrder: state.rahulOrder,
     activeTab: state.activeTab
   };
+  const comparableProfile = value => {
+    if (!value) return '';
+    const comparable = { ...value };
+    delete comparable.syncUpdatedAt;
+    return JSON.stringify(comparable);
+  };
+  const profileChanged = comparableProfile(profileData) !== comparableProfile(previousProfileData);
+  state.syncUpdatedAt = profileChanged ? Date.now() : (Number(previousProfileData?.syncUpdatedAt) || state.syncUpdatedAt || Date.now());
+  profileData.syncUpdatedAt = state.syncUpdatedAt;
   try {
     learnerProfiles[activeProfileId] = profileData;
     localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(learnerProfiles));
@@ -1385,7 +1395,7 @@ function buildCloudLearnerRecord(profileData = null) {
 function flushPendingCloudSave() {
   if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
   cloudSaveTimeout = null;
-  if (!pendingCloudRecord || !authUser?.uid || !window.firebaseSaveLearner) return Promise.resolve();
+  if (!pendingCloudRecord || !authUser?.uid || !window.firebaseSaveLearner || cloudHydrationPending) return Promise.resolve();
   const record = pendingCloudRecord;
   const uid = authUser.uid;
   pendingCloudRecord = null;
@@ -2723,7 +2733,7 @@ function handleFirebaseCloudError(error) {
   console.warn('Firebase data operation failed:', error?.code || error);
 }
 
-async function handleFirebaseAuthState(user) {
+function handleFirebaseAuthState(user) {
   pendingFirebaseUser = user;
   if (!appInitialized) return;
   const token = ++authStateVersion;
@@ -2736,6 +2746,7 @@ async function handleFirebaseAuthState(user) {
     if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
     cloudSaveTimeout = null;
     pendingCloudRecord = null;
+    cloudHydrationPending = false;
     authUser = null;
     activeProfileId = null;
     const adminButton = document.getElementById('adminDashboardBtn');
@@ -2757,22 +2768,15 @@ async function handleFirebaseAuthState(user) {
     if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
     cloudSaveTimeout = null;
     pendingCloudRecord = null;
+    cloudHydrationPending = false;
   }
   authUser = user;
   loadSavedState(user);
-  setCloudSyncStatus('Loading your Firebase progress…');
-  let cloudRecord = null;
-  if (window.firebaseLoadLearner) {
-    try { cloudRecord = await window.firebaseLoadLearner(user.uid); }
-    catch (error) { handleFirebaseCloudError(error); }
-  }
-  if (token !== authStateVersion || authUser?.uid !== user.uid) return;
-  if (cloudRecord?.profileData && Number(cloudRecord.clientUpdatedAt) >= state.syncUpdatedAt) {
-    applyLearnerState(cloudRecord.profileData, user.displayName);
-    state.syncUpdatedAt = Number(cloudRecord.clientUpdatedAt) || state.syncUpdatedAt;
-    setCloudSyncStatus('Loaded progress from Firebase.');
-  } else if (cloudRecord) setCloudSyncStatus('Local progress is newer; syncing it to Firebase…');
-  else setCloudSyncStatus('Creating your cloud progress record…');
+  const localUpdatedAtAtLogin = Number(state.syncUpdatedAt) || 0;
+  cloudHydrationPending = Boolean(window.firebaseLoadLearner);
+  setCloudSyncStatus(cloudHydrationPending
+    ? 'Signed in. Checking Firebase in the background; you can start learning now.'
+    : 'Signed in. Progress is saved on this device.');
 
   learnerLockUnsubscribe?.();
   learnerLockUnsubscribe = null;
@@ -2792,15 +2796,40 @@ async function handleFirebaseAuthState(user) {
   if (gate) gate.classList.add('hidden');
   updateHUD();
   renderProctorLockScreen();
-  if (state.proctorLockUntil > Date.now() && !state.remoteProctorLockActive && window.firebaseLockLearner) {
-    window.firebaseLockLearner(user.uid, state.proctorLockUntil, 'Migrated local proctor lock.', 'proctor')
-      .then(() => { state.remoteProctorLockActive = true; persistState(); })
-      .catch(handleFirebaseCloudError);
-  }
   persistState();
   if (previousUid !== user.uid) {
     sfx.playCorrect();
     showToast(`Signed in as ${user.displayName}. Your learner profile is ready.`);
+  }
+  if (window.firebaseLoadLearner) {
+    window.firebaseLoadLearner(user.uid).then(cloudRecord => {
+      if (token !== authStateVersion || authUser?.uid !== user.uid) return;
+      if (cloudRecord?.profileData && Number(cloudRecord.clientUpdatedAt) >= localUpdatedAtAtLogin) {
+        applyLearnerState(cloudRecord.profileData, user.displayName);
+        state.syncUpdatedAt = Number(cloudRecord.clientUpdatedAt) || state.syncUpdatedAt;
+        setCloudSyncStatus('Progress loaded from Firebase.');
+        renderAllQuestionSets();
+        renderMockCenter();
+        switchTab(state.activeTab);
+        updateHUD();
+      } else if (cloudRecord) {
+        setCloudSyncStatus('Local progress is newer; syncing it to Firebase…');
+      } else {
+        setCloudSyncStatus('Ready. New progress will sync to Firebase when connected.');
+      }
+      cloudHydrationPending = false;
+      if (state.proctorLockUntil > Date.now() && !state.remoteProctorLockActive && window.firebaseLockLearner) {
+        window.firebaseLockLearner(user.uid, state.proctorLockUntil, 'Migrated local proctor lock.', 'proctor')
+          .then(() => { state.remoteProctorLockActive = true; persistState(); })
+          .catch(handleFirebaseCloudError);
+      }
+      persistState();
+    }).catch(error => {
+      if (token !== authStateVersion || authUser?.uid !== user.uid) return;
+      cloudHydrationPending = false;
+      handleFirebaseCloudError(error);
+      persistState();
+    });
   }
 }
 

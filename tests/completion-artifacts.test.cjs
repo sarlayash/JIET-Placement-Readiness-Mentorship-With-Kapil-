@@ -138,6 +138,15 @@ test('only the verified allowlisted Google account receives admin access in UI a
   assert.match(html, /id="homeAdminDashboardLink"[^>]*onclick="openAdminDashboard\(\)"/);
 });
 
+test('Firebase profile hydration runs after login without holding the sign-in gate open', () => {
+  const app = fs.readFileSync(path.join(process.cwd(), 'app.js'), 'utf8');
+  const auth = fs.readFileSync(path.join(process.cwd(), 'firebase-auth.js'), 'utf8');
+  const handler = app.slice(app.indexOf('function handleFirebaseAuthState(user)'), app.indexOf('\nfunction openAdminDashboard()'));
+  assert.doesNotMatch(handler, /await window\.firebaseLoadLearner/);
+  assert.match(handler, /if \(gate\) gate\.classList\.add\('hidden'\);[\s\S]*window\.firebaseLoadLearner\(user\.uid\)\.then/);
+  assert.match(auth, /Could not enable persistent Google sign-in[\s\S]*continuing with Firebase defaults/);
+});
+
 test('saved learner profiles are isolated by Firebase UID even when names match', () => {
   const api = loadApp();
   api.loadSavedState({ uid: 'google-user-one', displayName: 'Alex Student' });
