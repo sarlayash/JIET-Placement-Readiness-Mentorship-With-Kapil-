@@ -14,6 +14,7 @@ const state = {
   level: 1,
   soundEnabled: true,
   certificateId: '',
+  certificateIssued: false,
   unlockedBadges: new Set(),
   answeredQuestions: {}, // { qId: { correct: bool, choice: string } }
   englishAssessments: {},
@@ -27,6 +28,20 @@ const PROFILES_STORAGE_KEY = 'faceprep_kapil_placement_profiles';
 const ACTIVE_PROFILE_STORAGE_KEY = 'faceprep_kapil_active_profile';
 let learnerProfiles = {};
 let activeProfileId = null;
+let lastLevelCompletionKey = null;
+
+const LEVEL_BADGES = [
+  { id: 'level_foundations', icon: '📖', title: 'Foundation Builder', desc: 'Passed Level 1 Foundations with at least 70%.' },
+  { id: 'level_english', icon: '🔤', title: 'English Master', desc: 'Passed all eight English Mastery assessments with at least 70% each.' },
+  { id: 'level_drills', icon: '🎯', title: 'Drill Specialist', desc: 'Passed Level 3 Proactive Drills with at least 70%.' },
+  { id: 'level_sentences', icon: '✍️', title: 'Sentence Strategist', desc: 'Passed Level 4 Sentence Battles with at least 70%.' },
+  { id: 'level_parajumbles', icon: '🧩', title: 'Paragraph Architect', desc: 'Passed Level 5 Para-Jumbles with at least 70%.' },
+  { id: 'level_cloze', icon: '🧪', title: 'Cloze Analyst', desc: 'Passed Level 6 Passage Cloze with at least 70%.' },
+  { id: 'level_soft_skills', icon: '🤝', title: 'Workplace Ready', desc: 'Passed Level 7 Soft Skills with at least 70%.' },
+  { id: 'level_communication', icon: '💬', title: 'Clear Communicator', desc: 'Passed Level 8 Communication with at least 70%.' },
+  { id: 'level_aptitude', icon: '🧠', title: 'Aptitude Ready', desc: 'Passed Level 9 Placement Aptitude with at least 70%.' },
+  { id: 'level_certificates', icon: '🏆', title: 'Career Ready', desc: 'Completed Level 10 by downloading your unlocked final certificate.' }
+];
 
 // Placement readiness badges across verbal, aptitude, communication, and workplace skills
 const BADGES_CONFIG = [
@@ -44,7 +59,8 @@ const BADGES_CONFIG = [
   { id: 'reasoning_ace', icon: '🧠', title: 'Reasoning Ace', desc: 'Scored 75% or higher on the Logical Reasoning assessment.' },
   { id: 'data_analyst', icon: '📊', title: 'Data Analyst', desc: 'Scored 75% or higher on the Data Interpretation assessment.' },
   { id: 'spatial_solver', icon: '🔷', title: 'Spatial Solver', desc: 'Scored 75% or higher on the Spatial Reasoning assessment.' },
-  ...ENGLISH_TOPICS.map(topic => ({ id: `english_${topic.id}`, icon: topic.icon, title: `${topic.title} Ace`, desc: `Scored 80% or higher on the ${topic.title} assessment.` }))
+  ...ENGLISH_TOPICS.map(topic => ({ id: `english_${topic.id}`, icon: topic.icon, title: `${topic.title} Ace`, desc: `Scored 80% or higher on the ${topic.title} assessment.` })),
+  ...LEVEL_BADGES
 ];
 
 const BADGE_TOTAL = BADGES_CONFIG.length;
@@ -981,6 +997,7 @@ function createFreshLearnerState(name = 'Learner') {
   state.level = 1;
   state.activeTab = 'tab-concepts';
   state.certificateId = generateCertificateId();
+  state.certificateIssued = false;
   state.unlockedBadges = new Set();
   state.answeredQuestions = {};
   state.englishAssessments = {};
@@ -997,6 +1014,7 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     ? safeData.unlockedBadges.filter(id => allowedBadgeIds.has(id))
     : [];
   const knownQuestions = [
+    ...FOUNDATION_ASSESSMENT,
     ...PROACTIVE_DRILLS, ...POS_DRILLS, ...SENTENCE_PAGE_1, ...SENTENCE_PAGE_2,
     ...PARAJUMBLES_PAGE_1, ...PARAJUMBLES_PAGE_2_3, ...CLOZE_QUESTIONS,
     ...CAREER_ASSESSMENTS.softSkills, ...CAREER_ASSESSMENTS.communication,
@@ -1059,6 +1077,7 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     certificateId: typeof safeData.certificateId === 'string' && /^JIET-\d{4}-[A-F0-9]{16}$/.test(safeData.certificateId)
       ? safeData.certificateId
       : generateCertificateId(),
+    certificateIssued: safeData.certificateIssued === true,
     xp,
     streak: Number.isFinite(Number(safeData.streak)) ? Math.max(0, Math.floor(Number(safeData.streak))) : 0,
     level: xp >= 1500 ? 5 : xp >= 1000 ? 4 : xp >= 600 ? 3 : xp >= 300 ? 2 : 1,
@@ -1079,6 +1098,7 @@ function applyLearnerState(data, fallbackName) {
   state.streak = safeData.streak;
   state.level = safeData.level;
   state.certificateId = safeData.certificateId;
+  state.certificateIssued = safeData.certificateIssued;
   state.soundEnabled = safeData.soundEnabled;
   state.unlockedBadges = new Set(safeData.unlockedBadges);
   state.answeredQuestions = safeData.answeredQuestions;
@@ -1151,6 +1171,7 @@ function persistState() {
       level: state.level,
       soundEnabled: state.soundEnabled,
       certificateId: state.certificateId,
+      certificateIssued: state.certificateIssued,
       unlockedBadges: Array.from(state.unlockedBadges),
       answeredQuestions: state.answeredQuestions,
       englishAssessments: state.englishAssessments,
@@ -1177,6 +1198,125 @@ function getAssessmentResult(questions) {
   };
 }
 
+function getLearningLevelProgress() {
+  const combinedResult = questions => getAssessmentResult(questions);
+  const foundation = combinedResult(FOUNDATION_ASSESSMENT);
+  const englishRecords = ENGLISH_TOPICS.map(topic => state.englishAssessments[topic.id]).filter(Boolean);
+  const passedEnglish = ENGLISH_TOPICS.filter(topic => (state.englishAssessments[topic.id]?.bestPercent || 0) >= 70).length;
+  const english = {
+    answered: passedEnglish,
+    correct: englishRecords.reduce((sum, record) => sum + record.bestCorrect, 0),
+    total: ENGLISH_TOPICS.length,
+    percentage: Math.round(englishRecords.reduce((sum, record) => sum + record.bestCorrect, 0) / (ENGLISH_TOPICS.length * 50) * 100),
+    complete: passedEnglish === ENGLISH_TOPICS.length
+  };
+  const drills = combinedResult([...PROACTIVE_DRILLS, ...POS_DRILLS, { id: 'rahul_timeline' }]);
+  const sentences = combinedResult([...SENTENCE_PAGE_1, ...SENTENCE_PAGE_2]);
+  const parajumbles = combinedResult([...PARAJUMBLES_PAGE_1, ...PARAJUMBLES_PAGE_2_3]);
+  const cloze = combinedResult(CLOZE_QUESTIONS);
+  const softSkills = combinedResult(CAREER_ASSESSMENTS.softSkills);
+  const communication = combinedResult(CAREER_ASSESSMENTS.communication);
+  const aptitude = combinedResult(APTITUDE_QUESTIONS);
+  const definitions = [
+    { number: 1, id: 'foundations', paneId: 'tab-concepts', title: 'Foundations', badgeId: 'level_foundations', result: foundation },
+    { number: 2, id: 'english', paneId: 'tab-english', title: 'English Mastery', badgeId: 'level_english', result: english },
+    { number: 3, id: 'drills', paneId: 'tab-drills', title: 'Proactive Drills', badgeId: 'level_drills', result: drills },
+    { number: 4, id: 'sentences', paneId: 'tab-sentences', title: 'Sentence Battles', badgeId: 'level_sentences', result: sentences },
+    { number: 5, id: 'parajumbles', paneId: 'tab-parajumbles', title: 'Para-Jumbles', badgeId: 'level_parajumbles', result: parajumbles },
+    { number: 6, id: 'cloze', paneId: 'tab-cloze', title: 'Passage Cloze', badgeId: 'level_cloze', result: cloze },
+    { number: 7, id: 'soft_skills', paneId: 'tab-soft-skills', title: 'Soft Skills', badgeId: 'level_soft_skills', result: softSkills },
+    { number: 8, id: 'communication', paneId: 'tab-communication', title: 'Communication', badgeId: 'level_communication', result: communication },
+    { number: 9, id: 'aptitude', paneId: 'tab-aptitude', title: 'Placement Aptitude', badgeId: 'level_aptitude', result: aptitude }
+  ].map(level => ({ ...level, complete: level.result.complete && level.result.percentage >= 70 }));
+  const learningLevelsComplete = definitions.every(level => level.complete);
+  definitions.push({
+    number: 10,
+    id: 'certificates',
+    paneId: 'tab-certificate',
+    title: 'Certificates',
+    badgeId: 'level_certificates',
+    result: { answered: state.certificateIssued ? 1 : 0, correct: state.certificateIssued ? 1 : 0, total: 1, percentage: state.certificateIssued ? 100 : 0, complete: state.certificateIssued && learningLevelsComplete },
+    complete: state.certificateIssued && learningLevelsComplete,
+    locked: !learningLevelsComplete
+  });
+  return definitions;
+}
+
+function areAllLearningLevelsComplete() {
+  return getLearningLevelProgress().filter(level => level.number <= 9).every(level => level.complete);
+}
+
+function getNewLevelBadges(levels = getLearningLevelProgress(), unlocked = state.unlockedBadges) {
+  return levels.filter(level => level.complete && !unlocked.has(level.badgeId));
+}
+
+function updateLearningProgressUI() {
+  const levels = getLearningLevelProgress();
+  const newLevelBadges = getNewLevelBadges(levels);
+  newLevelBadges.forEach(level => {
+    state.unlockedBadges.add(level.badgeId);
+    if (level.number === 1) state.unlockedBadges.add('recruit');
+  });
+  if (newLevelBadges.length) {
+    sfx.playBadge();
+    triggerConfetti(1.1);
+    showToast(newLevelBadges.length === 1
+      ? `🏅 Level ${newLevelBadges[0].number} badge unlocked: ${LEVEL_BADGES.find(badge => badge.id === newLevelBadges[0].badgeId)?.title}!`
+      : `🏅 ${newLevelBadges.length} level badges unlocked!`);
+    persistState();
+  }
+
+  levels.forEach(level => {
+    const pane = document.getElementById(level.paneId);
+    const desktopButton = document.querySelector(`.nav-tab[data-tab="${level.paneId}"]`);
+    const mobileButton = document.querySelector(`.mobile-nav-btn[data-tab="${level.paneId}"]`);
+    [desktopButton, mobileButton].forEach(button => {
+      if (!button) return;
+      button.classList.toggle('completed', level.complete);
+      button.classList.toggle('locked', Boolean(level.locked));
+      button.title = level.locked ? `Complete Levels 1–9 to unlock ${level.title}.` : level.complete ? `${level.title} complete — select to review.` : `${level.title} in progress.`;
+      button.setAttribute('aria-label', `${level.number}. ${level.title}${level.complete ? ', completed' : level.locked ? ', locked until Levels 1 through 9 are complete' : ', in progress'}`);
+    });
+    if (!pane) return;
+    pane.classList.toggle('level-complete', level.complete);
+    let status = pane.querySelector('.level-progress-status');
+    if (!status) {
+      status = document.createElement('div');
+      status.className = 'level-progress-status';
+      status.setAttribute('role', 'status');
+      pane.querySelector('.section-header')?.after(status);
+    }
+    status.classList.toggle('is-complete', level.complete);
+    if (level.locked) status.textContent = `🔒 Level 10 is locked. Complete Levels 1–9 before downloading your final certificate.`;
+    else if (level.number === 2) status.textContent = level.complete
+      ? `✓ Level 2 complete · ${level.result.answered}/${level.result.total} English assessments passed · Badge unlocked`
+      : `Level 2 progress · ${level.result.answered}/${level.result.total} English assessments passed at 70% or higher`;
+    else if (level.complete) status.textContent = `✓ Level ${level.number} complete · ${level.result.correct}/${level.result.total} correct · Badge unlocked · Review anytime`;
+    else status.textContent = `Level ${level.number} in progress · ${level.result.answered}/${level.result.total} answered · ${level.result.percentage}% (70% and all answers required)`;
+  });
+
+  const completionKey = levels.map(level => level.complete ? '1' : '0').join('');
+  if (completionKey !== lastLevelCompletionKey) {
+    lastLevelCompletionKey = completionKey;
+    renderEnglishTopicCards();
+  }
+  updateCertificateAccessUI(levels);
+}
+
+function updateCertificateAccessUI(levels = getLearningLevelProgress()) {
+  const allLevelsComplete = levels.filter(level => level.number <= 9).every(level => level.complete);
+  const lockPanel = document.getElementById('certificateLockPanel');
+  const certificateContent = document.getElementById('certificateUnlockedContent');
+  if (lockPanel) lockPanel.classList.toggle('hidden', allLevelsComplete);
+  if (certificateContent) certificateContent.classList.toggle('hidden', !allLevelsComplete);
+  const lockList = document.getElementById('certificateLevelChecklist');
+  if (lockList) {
+    lockList.innerHTML = levels.filter(level => level.number <= 9).map(level =>
+      `<li class="${level.complete ? 'done' : ''}"><span>${level.complete ? '✓' : '○'}</span><strong>Level ${level.number}: ${escapeEnglishHTML(level.title)}</strong><small>${level.complete ? 'Passed — badge earned' : level.number === 2 ? `${level.result.answered}/8 English assessments passed` : `${level.result.answered}/${level.result.total} questions answered · ${level.result.percentage}%`}</small></li>`
+    ).join('');
+  }
+}
+
 function updateCareerTrackUI() {
   const trackDisplays = [
     { id: 'softSkills', questions: CAREER_ASSESSMENTS.softSkills, certificate: CAREER_CERTIFICATES.softSkills },
@@ -1187,17 +1327,16 @@ function updateCareerTrackUI() {
   trackDisplays.forEach((track) => {
     const result = getAssessmentResult(track.questions);
     const progress = document.getElementById(`${track.id}Progress`);
-    const certificateButton = document.getElementById(`${track.id}CertificateBtn`);
-    const eligible = result.complete && result.percentage >= 70;
+    const certificateButtons = ['PNG', 'PDF'].map(format => document.getElementById(`${track.id}Certificate${format}Btn`)).filter(Boolean);
+    const eligible = areAllLearningLevelsComplete() && result.complete && result.percentage >= 70;
     if (progress) {
       progress.textContent = `${result.answered}/${result.total} answered · ${result.correct} correct · ${result.percentage}%`;
     }
-    if (certificateButton) {
-      certificateButton.disabled = !eligible;
-      certificateButton.textContent = eligible
-        ? `📜 Download ${track.certificate.title} Certificate`
-        : 'Answer every question and score at least 70% to unlock';
-    }
+    certificateButtons.forEach(button => { button.disabled = !eligible; });
+    const lockNote = document.getElementById(`${track.id}CertificateStatus`);
+    if (lockNote) lockNote.textContent = !areAllLearningLevelsComplete()
+      ? 'Locked until all nine learning levels are passed.'
+      : eligible ? `Unlocked · ${result.percentage}%` : 'Complete every question and score at least 70%.';
   });
 }
 
@@ -1223,6 +1362,7 @@ function renderEnglishTopicCards() {
     const active = state.activeEnglishAssessment?.topicId === topic.id;
     const article = document.createElement('article');
     article.className = 'english-topic-card';
+    article.classList.toggle('completed', (previous?.bestPercent || 0) >= 70);
     article.id = `english-topic-${topic.id}`;
     article.innerHTML = `
       <div class="english-topic-card-title"><span>${escapeEnglishHTML(topic.icon)}</span><div><h3>${escapeEnglishHTML(topic.title)}</h3><span class="badge-chip">50 MCQs · 50 min</span></div></div>
@@ -1232,7 +1372,7 @@ function renderEnglishTopicCards() {
         <div class="mentor-note-body"><p>${escapeEnglishHTML(topic.notes)}</p><strong>Solved placement example</strong><p>${escapeEnglishHTML(topic.solved)}</p></div>
       </details>
       <div class="english-topic-result">${previous ? `Best score: <strong>${previous.bestCorrect}/50 (${previous.bestPercent}%)</strong> · ${previous.attempts} attempt${previous.attempts === 1 ? '' : 's'}` : 'Assessment not attempted yet.'}</div>
-      <div class="english-topic-actions"><button type="button" class="btn btn-primary" onclick="startEnglishAssessment('${topic.id}')">${active ? '▶ Resume assessment' : previous ? '↻ Retake assessment' : '▶ Start assessment'}</button>${previous?.bestPercent >= 70 ? `<button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}')">📜 Certificate</button>` : ''}</div>
+      <div class="english-topic-actions"><button type="button" class="btn btn-primary" onclick="startEnglishAssessment('${topic.id}')">${active ? '▶ Resume assessment' : previous ? '↻ Retake assessment' : '▶ Start assessment'}</button>${previous?.bestPercent >= 70 && areAllLearningLevelsComplete() ? `<button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}', 'png')">Certificate PNG</button><button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}', 'pdf')">Certificate PDF</button>` : ''}</div>
     `;
     grid.appendChild(article);
 
@@ -1388,14 +1528,19 @@ function finishEnglishAssessment(timesUp) {
   document.querySelector('.english-exam-submit-row').classList.add('hidden');
   const result = document.getElementById('englishAssessmentResult');
   result.classList.remove('hidden');
-  result.innerHTML = `<h4>${timesUp ? '⏱️ Time is up' : 'Assessment submitted'}: ${escapeEnglishHTML(topic.title)}</h4><p>Your score: <strong>${correct}/50 (${Math.round(correct / 50 * 100)}%)</strong>. Best score: <strong>${bestCorrect}/50 (${bestPercent}%)</strong>.</p><p>${bestPercent >= 80 ? '🏅 Topic badge earned!' : bestPercent >= 70 ? 'You qualify for this topic certificate.' : 'Review Kapil’s notes and try again to reach 70% for a certificate.'}</p><div class="english-topic-actions"><button type="button" class="btn btn-primary" onclick="startEnglishAssessment('${topic.id}')">↻ Retake assessment</button>${bestPercent >= 70 ? `<button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}')">📜 Download topic certificate</button>` : ''}</div>`;
+  const certificateReady = areAllLearningLevelsComplete();
+  result.innerHTML = `<h4>${timesUp ? '⏱️ Time is up' : 'Assessment submitted'}: ${escapeEnglishHTML(topic.title)}</h4><p>Your score: <strong>${correct}/50 (${Math.round(correct / 50 * 100)}%)</strong>. Best score: <strong>${bestCorrect}/50 (${bestPercent}%)</strong>.</p><p>${bestPercent >= 80 ? '🏅 Topic badge earned!' : bestPercent >= 70 ? certificateReady ? 'All learning levels are complete; your topic certificate is unlocked.' : 'Your score qualifies. Topic certificates unlock after all nine learning levels are passed.' : 'Review Kapil’s notes and try again to reach 70% for a certificate.'}</p><div class="english-topic-actions"><button type="button" class="btn btn-primary" onclick="startEnglishAssessment('${topic.id}')">↻ Retake assessment</button>${bestPercent >= 70 && certificateReady ? `<button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}', 'png')">Topic certificate PNG</button><button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}', 'pdf')">Topic certificate PDF</button>` : ''}</div>`;
   if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   showToast(timesUp ? 'Time is up. Your assessment has been submitted.' : `Assessment complete: ${correct}/50 correct.`);
 }
 
-function downloadEnglishCertificate(topicId) {
+function downloadEnglishCertificate(topicId, format = 'png') {
   const topic = ENGLISH_TOPICS.find(item => item.id === topicId);
   const result = state.englishAssessments[topicId];
+  if (!areAllLearningLevelsComplete()) {
+    showToast('Complete all nine learning levels to unlock certificates.');
+    return;
+  }
   if (!topic || !result || result.bestPercent < 70) return;
   const canvas = document.createElement('canvas');
   canvas.width = 1400;
@@ -1413,10 +1558,7 @@ function downloadEnglishCertificate(topicId) {
   ctx.fillText(`Certificate ID: ${result.certificateId}`, 700, 715);
   ctx.fillText(`Issued ${new Date(result.bestCompletedAt || result.completedAt || Date.now()).toLocaleDateString('en-GB')}`, 700, 765);
   ctx.font = '700 22px sans-serif'; ctx.fillText('Placement Readiness Mentorship With Kapil', 700, 850);
-  const link = document.createElement('a');
-  link.download = `JIET_${topicId}_Certificate_${state.learnerName.replace(/\s+/g, '_')}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+  downloadCanvasArtifact(canvas, `JIET_${topicId}_Certificate_${safeFilename(state.learnerName)}`, format);
 }
 
 function getCertificateRecipientName() {
@@ -1424,9 +1566,71 @@ function getCertificateRecipientName() {
   return (input?.value || '').trim() || state.learnerName;
 }
 
-function downloadTrackCertificate(trackId) {
+function safeFilename(value) {
+  return String(value || 'Learner').trim().replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '') || 'Learner';
+}
+
+function imageCanvasToPdfBlob(canvas) {
+  const jpegData = canvas.toDataURL('image/jpeg', 0.94).split(',')[1];
+  const jpegBinary = atob(jpegData);
+  const jpegBytes = Uint8Array.from(jpegBinary, character => character.charCodeAt(0));
+  const encoder = new TextEncoder();
+  const chunks = [];
+  let byteLength = 0;
+  const offsets = [0];
+  const append = bytes => { chunks.push(bytes); byteLength += bytes.length; };
+  const text = value => encoder.encode(value);
+  append(text('%PDF-1.4\n'));
+  const addObject = (number, body) => {
+    offsets[number] = byteLength;
+    append(text(`${number} 0 obj\n${body}\nendobj\n`));
+  };
+  addObject(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  addObject(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  addObject(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+  offsets[4] = byteLength;
+  append(text(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`));
+  append(jpegBytes);
+  append(text('\nendstream\nendobj\n'));
+  const pageContent = `q\n842 0 0 595 0 0 cm\n/Im0 Do\nQ\n`;
+  addObject(5, `<< /Length ${text(pageContent).length} >>\nstream\n${pageContent}endstream`);
+  const xrefOffset = byteLength;
+  let xref = `xref\n0 6\n0000000000 65535 f \n`;
+  for (let object = 1; object <= 5; object++) xref += `${String(offsets[object]).padStart(10, '0')} 00000 n \n`;
+  xref += `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  append(text(xref));
+  return new Blob(chunks, { type: 'application/pdf' });
+}
+
+function downloadCanvasArtifact(canvas, baseFilename, format = 'png') {
+  const kind = format === 'pdf' ? 'pdf' : 'png';
+  const link = document.createElement('a');
+  link.download = `${baseFilename}.${kind}`;
+  if (kind === 'pdf') {
+    const blobUrl = URL.createObjectURL(imageCanvasToPdfBlob(canvas));
+    link.href = blobUrl;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  } else {
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+}
+
+function recordFinalCertificateDownload() {
+  if (state.certificateIssued) return;
+  state.certificateIssued = true;
+  updateHUD();
+  persistState();
+}
+
+function downloadTrackCertificate(trackId, format = 'png') {
   const track = CAREER_CERTIFICATES[trackId];
   if (!track) return;
+  if (!areAllLearningLevelsComplete()) {
+    showToast('Complete all nine learning levels to unlock certificates.');
+    return;
+  }
   const result = getAssessmentResult(track.questions);
   if (!result.complete || result.percentage < 70) {
     showToast('Complete the assessment with at least 70% to unlock this certificate.');
@@ -1479,14 +1683,12 @@ function downloadTrackCertificate(trackId) {
   ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
   ctx.fillText('Mentorship With Kapil • JIET Placement Readiness', canvas.width / 2, 825);
 
-  const link = document.createElement('a');
-  link.download = `JIET_${trackId}_Certificate_${state.learnerName.replace(/\s+/g, '_')}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
-  showToast(`${track.title} certificate downloaded! 🏆`);
+  downloadCanvasArtifact(canvas, `JIET_${trackId}_Certificate_${safeFilename(state.learnerName)}`, format);
+  showToast(`${track.title} certificate ${format.toUpperCase()} downloaded! 🏆`);
 }
 
 function updateHUD() {
+  updateLearningProgressUI();
   document.getElementById('hudXP').textContent = state.xp.toLocaleString();
   document.getElementById('hudStreak').textContent = state.streak;
   document.getElementById('hudLevel').textContent = `Lvl ${state.level}`;
@@ -1497,9 +1699,9 @@ function updateHUD() {
   if (soundButton) soundButton.setAttribute('aria-pressed', String(state.soundEnabled));
 
   // Global Progress percentage calculation
-  const totalQuestions = PROACTIVE_DRILLS.length + POS_DRILLS.length + 1 + 
-                         SENTENCE_PAGE_1.length + SENTENCE_PAGE_2.length + 
-                         PARAJUMBLES_PAGE_1.length + PARAJUMBLES_PAGE_2_3.length + 
+  const totalQuestions = FOUNDATION_ASSESSMENT.length + PROACTIVE_DRILLS.length + POS_DRILLS.length + 1 +
+                         SENTENCE_PAGE_1.length + SENTENCE_PAGE_2.length +
+                         PARAJUMBLES_PAGE_1.length + PARAJUMBLES_PAGE_2_3.length +
                          CLOZE_QUESTIONS.length +
                          CAREER_ASSESSMENTS.softSkills.length +
                          CAREER_ASSESSMENTS.communication.length +
@@ -1532,7 +1734,7 @@ function updateHUD() {
 function addXP(amount, reason = '') {
   state.xp += amount;
   state.streak += 1;
-  
+
   // Calculate Level (100 XP = Lvl 1, 300 = Lvl 2, 600 = Lvl 3, 1000 = Lvl 4, 1500 = Lvl 5)
   if (state.xp >= 1500) state.level = 5;
   else if (state.xp >= 1000) state.level = 4;
@@ -1567,8 +1769,6 @@ function unlockBadge(badgeId) {
 }
 
 function checkBadgeUnlocks() {
-  unlockBadge('recruit');
-
   // Detective: answered at least 3 drill questions
   const proactiveSolved = PROACTIVE_DRILLS.filter(q => state.answeredQuestions[q.id]?.correct).length;
   if (proactiveSolved >= 3) unlockBadge('detective');
@@ -1754,6 +1954,7 @@ function restoreClozePassage() {
 }
 
 function renderAllQuestionSets() {
+  renderMultipleChoiceList('foundationAssessmentContainer', FOUNDATION_ASSESSMENT, 25);
   renderMultipleChoiceList('proactiveDrillContainer', PROACTIVE_DRILLS, 50);
   renderMultipleChoiceList('posDrillContainer', POS_DRILLS, 50);
   renderRahulTimeline();
@@ -2002,7 +2203,6 @@ function startJourney() {
   if (certInput) certInput.value = name;
   renderAllQuestionSets();
   switchTab(state.activeTab);
-  unlockBadge('recruit');
   updateHUD();
   persistState();
 
@@ -2022,7 +2222,11 @@ function refreshCert() {
   showToast('Certificate recipient name updated! 📜');
 }
 
-function downloadCertificatePNG() {
+function downloadCertificatePNG(format = 'png') {
+  if (!areAllLearningLevelsComplete()) {
+    showToast('Complete all nine learning levels to unlock your Career Readiness certificate.');
+    return;
+  }
   const certNode = document.getElementById('certificateNode');
   if (!certNode) return;
 
@@ -2149,11 +2353,9 @@ function downloadCertificatePNG() {
   const now = new Date();
   ctx.fillText(`Date: ${now.toLocaleDateString('en-GB')}`, 1040, 758);
 
-  // Download Trigger
-  const link = document.createElement('a');
-  link.download = `FACEPrep_Placement_Certificate_${state.learnerName.replace(/\s+/g, '_')}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+  downloadCanvasArtifact(canvas, `FACEPrep_Placement_Certificate_${safeFilename(state.learnerName)}`, format);
+  recordFinalCertificateDownload();
+  showToast(`Career Readiness certificate ${format.toUpperCase()} downloaded! 🎓`);
 }
 
 // ==========================================
@@ -2171,6 +2373,55 @@ function restoreModalFocus() {
   modalReturnFocus = null;
 }
 
+function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = String(text).split(/\s+/);
+  let line = '';
+  const lines = [];
+  words.forEach(word => {
+    const candidate = line ? `${line} ${word}` : word;
+    if (ctx.measureText(candidate).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else line = candidate;
+  });
+  if (line) lines.push(line);
+  lines.forEach((lineText, index) => ctx.fillText(lineText, x, y + index * lineHeight));
+}
+
+function renderBadgeCanvas(badge) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 840;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFDF9'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#D4AF37'; ctx.lineWidth = 12; ctx.strokeRect(34, 34, 1132, 772);
+  ctx.strokeStyle = '#FF5500'; ctx.lineWidth = 3; ctx.strokeRect(52, 52, 1096, 736);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FF5500'; ctx.font = '700 32px sans-serif'; ctx.fillText('JIET PLACEMENT READINESS MENTORSHIP', 600, 120);
+  ctx.fillStyle = '#C28B38'; ctx.font = '700 18px sans-serif'; ctx.fillText('SKILL BADGE', 600, 175);
+  ctx.beginPath(); ctx.arc(600, 330, 104, 0, Math.PI * 2); ctx.fillStyle = '#FFF7ED'; ctx.fill();
+  ctx.strokeStyle = '#D4AF37'; ctx.lineWidth = 9; ctx.stroke();
+  ctx.font = '92px sans-serif'; ctx.fillText(badge.icon, 600, 362);
+  ctx.fillStyle = '#0F172A'; ctx.font = '700 40px Georgia, serif'; ctx.fillText(badge.title, 600, 490);
+  ctx.fillStyle = '#475569'; ctx.font = '21px sans-serif';
+  drawWrappedText(ctx, badge.desc, 600, 540, 820, 32);
+  ctx.fillStyle = '#64748B'; ctx.font = '20px sans-serif';
+  ctx.fillText(`Awarded to ${state.learnerName}`, 600, 675);
+  ctx.fillText(`Badge: ${badge.id} · ${new Date().toLocaleDateString('en-GB')}`, 600, 720);
+  ctx.fillStyle = '#9A3412'; ctx.font = '700 17px sans-serif'; ctx.fillText('MENTORSHIP WITH KAPIL • JIET', 600, 765);
+  return canvas;
+}
+
+function downloadBadgeArtifact(badgeId, format = 'png') {
+  const badge = BADGES_CONFIG.find(item => item.id === badgeId);
+  if (!badge || !state.unlockedBadges.has(badgeId)) {
+    showToast('This badge is still locked. Complete its level to download it.');
+    return;
+  }
+  downloadCanvasArtifact(renderBadgeCanvas(badge), `JIET_Badge_${safeFilename(badge.id)}_${safeFilename(state.learnerName)}`, format);
+  showToast(`${badge.title} badge ${format.toUpperCase()} downloaded!`);
+}
+
 function openBadgesModal() {
   const modal = document.getElementById('badgesModal');
   const grid = document.getElementById('badgesModalGrid');
@@ -2186,6 +2437,7 @@ function openBadgesModal() {
       <div class="badge-info">
         <h4>${b.title} ${isUnlocked ? '✓' : '🔒'}</h4>
         <p>${b.desc}</p>
+        ${isUnlocked ? `<div class="badge-download-actions"><button type="button" class="btn btn-secondary" onclick="downloadBadgeArtifact('${b.id}', 'png')">Badge PNG</button><button type="button" class="btn btn-secondary" onclick="downloadBadgeArtifact('${b.id}', 'pdf')">Badge PDF</button></div>` : '<span class="badge-locked-caption">Unlock this badge by completing its requirement.</span>'}
       </div>
     `;
     grid.appendChild(card);
@@ -2257,7 +2509,7 @@ function handleLogoff() {
     renderAllQuestionSets();
     switchTab('tab-concepts');
     updateHUD();
-    
+
     // Show onboarding modal for new user
     const onboarding = document.getElementById('onboardingModal');
     if (onboarding) {
@@ -2278,7 +2530,7 @@ function handleResetProfile() {
     learnerProfiles = {};
     activeProfileId = null;
     createFreshLearnerState();
-    
+
     showToast('Profile & progress reset completely! Restarting...');
     setTimeout(() => {
       window.location.reload();

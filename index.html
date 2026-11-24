@@ -62,7 +62,7 @@
 
           <button id="badgesModalBtn" class="hud-btn badge-btn" title="View Earned Badges" aria-label="View Badges">
             <span>🏅</span>
-            <span class="badge-count-pill" id="badgeCount">0/22</span>
+            <span class="badge-count-pill" id="badgeCount">0/32</span>
           </button>
 
           <button id="profileSettingsBtn" class="hud-btn" title="Profile, Log Off & Reset Progress" aria-label="Profile Settings">
@@ -95,7 +95,7 @@
           <p class="hero-subtext">Crush corporate verbal aptitude tests (TCS, Infosys, Cognizant, Wipro, Accenture) with proactive sentence completion & para-jumble master strategies powered by FACE Prep.</p>
           <div class="hero-stats-row">
             <span class="stat-pill"><strong>500+</strong> Assessment Questions</span>
-            <span class="stat-pill"><strong>22</strong> Skill Badges</span>
+            <span class="stat-pill"><strong>32</strong> Skill Badges</span>
             <span class="stat-pill"><strong>100%</strong> Complete Coverage of Worksheet</span>
             <span class="stat-pill highlight-pill">📜 Official Certificate</span>
           </div>
@@ -466,6 +466,12 @@
           </div>
         </div>
 
+        <div class="career-assessment-panel foundation-assessment-panel">
+          <div class="career-assessment-heading"><div><span class="badge-chip">10 Questions · Pass at 70%</span><h3>Level 1 Foundations Check</h3><p>Show you can apply the core verbal reasoning strategies before moving into topic mastery.</p></div><span class="xp-badge">+25 XP per correct answer</span></div>
+          <p class="career-assessment-progress" id="foundationProgress" aria-live="polite">0/10 answered · 0 correct · 0%</p>
+          <div class="quiz-items-container" id="foundationAssessmentContainer"></div>
+        </div>
+
         <section class="topic-connections-card" aria-labelledby="topicConnectionsTitle">
           <div class="topic-connections-heading">
             <span class="topic-connections-icon" aria-hidden="true">🧭</span>
@@ -776,7 +782,8 @@
           <div class="career-assessment-heading"><div><span class="badge-chip">10 Scenario Questions</span><h3>Soft Skills Assessment</h3><p>Choose the response that shows professional judgment and practical workplace behavior.</p></div><span class="xp-badge">+25 XP per correct answer</span></div>
           <p class="career-assessment-progress" id="softSkillsProgress" aria-live="polite">0/10 answered · 0 correct · 0%</p>
           <div class="quiz-items-container" id="softSkillsAssessmentContainer"></div>
-          <button class="btn btn-primary career-certificate-btn" id="softSkillsCertificateBtn" type="button" disabled onclick="downloadTrackCertificate('softSkills')">Answer every question and score at least 70% to unlock</button>
+          <p class="certificate-lock-note" id="softSkillsCertificateStatus">Locked until all nine learning levels are passed.</p>
+          <div class="certificate-download-actions"><button class="btn btn-primary" id="softSkillsCertificatePNGBtn" type="button" disabled onclick="downloadTrackCertificate('softSkills', 'png')">📥 Soft Skills Certificate (PNG)</button><button class="btn btn-secondary" id="softSkillsCertificatePDFBtn" type="button" disabled onclick="downloadTrackCertificate('softSkills', 'pdf')">📄 Soft Skills Certificate (PDF)</button></div>
         </div>
         <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-communication')"><span>Continue to Level 8: Professional Communication</span><span class="btn-arrow">→</span></button></div>
       </section>
@@ -798,7 +805,8 @@
           <div class="career-assessment-heading"><div><span class="badge-chip">10 Scenario Questions</span><h3>Professional Communication Assessment</h3><p>Apply audience-aware communication to realistic team, client, and interview situations.</p></div><span class="xp-badge">+25 XP per correct answer</span></div>
           <p class="career-assessment-progress" id="communicationProgress" aria-live="polite">0/10 answered · 0 correct · 0%</p>
           <div class="quiz-items-container" id="communicationAssessmentContainer"></div>
-          <button class="btn btn-primary career-certificate-btn" id="communicationCertificateBtn" type="button" disabled onclick="downloadTrackCertificate('communication')">Answer every question and score at least 70% to unlock</button>
+          <p class="certificate-lock-note" id="communicationCertificateStatus">Locked until all nine learning levels are passed.</p>
+          <div class="certificate-download-actions"><button class="btn btn-primary" id="communicationCertificatePNGBtn" type="button" disabled onclick="downloadTrackCertificate('communication', 'png')">📥 Communication Certificate (PNG)</button><button class="btn btn-secondary" id="communicationCertificatePDFBtn" type="button" disabled onclick="downloadTrackCertificate('communication', 'pdf')">📄 Communication Certificate (PDF)</button></div>
         </div>
         <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-aptitude')"><span>Continue to Level 9: Placement Aptitude</span><span class="btn-arrow">→</span></button></div>
       </section>
@@ -836,7 +844,8 @@
           <h3>Placement Aptitude Certificate</h3>
           <p class="career-assessment-progress" id="aptitudeProgress" aria-live="polite">0/52 answered · 0 correct · 0%</p>
           <p>Complete all four aptitude sections and earn at least 70% overall to unlock your downloadable certificate.</p>
-          <button class="btn btn-primary career-certificate-btn" id="aptitudeCertificateBtn" type="button" disabled onclick="downloadTrackCertificate('aptitude')">Answer every question and score at least 70% to unlock</button>
+          <p class="certificate-lock-note" id="aptitudeCertificateStatus">Locked until all nine learning levels are passed.</p>
+          <div class="certificate-download-actions"><button class="btn btn-primary" id="aptitudeCertificatePNGBtn" type="button" disabled onclick="downloadTrackCertificate('aptitude', 'png')">📥 Aptitude Certificate (PNG)</button><button class="btn btn-secondary" id="aptitudeCertificatePDFBtn" type="button" disabled onclick="downloadTrackCertificate('aptitude', 'pdf')">📄 Aptitude Certificate (PDF)</button></div>
         </div>
         <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-certificate')"><span>View Your Career Readiness Certificates</span><span class="btn-arrow">🏆</span></button></div>
       </section>
@@ -846,9 +855,17 @@
         <div class="section-header text-center">
           <div class="badge-chip gold-chip">Level 10 • Official Recognition</div>
           <h2>Career Readiness Certificate</h2>
-          <p class="section-desc">Your overall certificate records earned XP and badges. Complete the Soft Skills, Communication, Aptitude, or any English Mastery assessment to unlock additional track certificates.</p>
+          <p class="section-desc">Complete Levels 1–9 with a passing score to unlock the final Career Readiness certificate. Download it as PNG or PDF; downloading marks Level 10 complete and unlocks its badge.</p>
         </div>
 
+        <section id="certificateLockPanel" class="certificate-lock-panel" aria-live="polite">
+          <span class="badge-chip">🔒 Locked</span>
+          <h3>Complete every learning level to unlock your certificates</h3>
+          <p>Pass each level by answering all of its questions and earning at least 70%. All individual and final certificates stay locked until Levels 1–9 are complete.</p>
+          <ol id="certificateLevelChecklist" class="certificate-level-checklist"></ol>
+        </section>
+
+        <div id="certificateUnlockedContent" class="hidden">
         <div class="certificate-meta-actions">
           <div class="learner-cert-name-input-row">
             <label for="certCustomName">Name on Certificate:</label>
@@ -857,12 +874,8 @@
             <button class="btn btn-secondary" onclick="openProfileModal()" title="Switch learner or reset">👤 Switch / Reset</button>
           </div>
           <div class="cert-btn-group">
-            <button class="btn btn-primary" onclick="downloadCertificatePNG()">
-              <span>📥 Download Certificate (PNG)</span>
-            </button>
-            <button class="btn btn-secondary" onclick="window.print()">
-              <span>🖨️ Print / Save as PDF</span>
-            </button>
+            <button class="btn btn-primary" onclick="downloadCertificatePNG('png')"><span>📥 Career Certificate (PNG)</span></button>
+            <button class="btn btn-secondary" onclick="downloadCertificatePNG('pdf')"><span>📄 Career Certificate (PDF)</span></button>
           </div>
         </div>
 
@@ -911,7 +924,7 @@
                 </div>
                 <div class="cert-stat">
                   <span class="cert-stat-label">Mastery Badges</span>
-                  <strong class="cert-stat-val" id="certBadgesEarned">0 of 22 Unlocked</strong>
+                  <strong class="cert-stat-val" id="certBadgesEarned">0 of 32 Unlocked</strong>
                 </div>
                 <div class="cert-stat">
                   <span class="cert-stat-label">Curriculum Code</span>
@@ -944,6 +957,7 @@
               </div>
             </div>
           </div>
+        </div>
         </div>
 
       </section>
@@ -1052,7 +1066,7 @@
               <div class="profile-stats-row">
                 <span class="profile-stat-badge" id="profileStatXP">⚡ 0 XP</span>
                 <span class="profile-stat-badge" id="profileStatLevel">⭐ Level 1</span>
-                <span class="profile-stat-badge" id="profileStatBadges">🏅 0/22 Badges</span>
+                <span class="profile-stat-badge" id="profileStatBadges">🏅 0/32 Badges</span>
               </div>
             </div>
           </div>

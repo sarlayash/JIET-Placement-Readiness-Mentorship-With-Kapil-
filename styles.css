@@ -485,6 +485,13 @@ body {
   background: var(--face-orange);
   box-shadow: 0 4px 14px var(--face-orange-glow);
 }
+.nav-tab.completed:not(.active), .nav-tab.locked:not(.active) {
+  color: #94A3B8;
+  background: #F1F5F9;
+  filter: grayscale(1);
+}
+.nav-tab.completed:not(.active)::after { content: '✓'; margin-left: 2px; color: #64748B; font-weight: 900; }
+.nav-tab.locked:not(.active) { opacity: 0.62; }
 
 .certificate-tab-btn.active {
   background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
@@ -508,6 +515,11 @@ body {
 .tab-pane.active {
   display: block;
 }
+.tab-pane.level-complete > .section-header { filter: grayscale(0.82); opacity: 0.78; }
+.tab-pane.level-complete > :not(.level-progress-status) { filter: grayscale(0.72); opacity: 0.82; }
+.tab-pane.level-complete > .level-progress-status { filter: grayscale(1); }
+.level-progress-status { margin: -6px 0 14px; padding: 10px 13px; border: 1px solid #CBD5E1; border-radius: var(--radius-md); color: #64748B; background: #F1F5F9; font-size: 0.8rem; font-weight: 750; line-height: 1.45; }
+.level-progress-status.is-complete { color: #64748B; border-color: #CBD5E1; background: #E2E8F0; filter: grayscale(1); }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
@@ -691,6 +703,7 @@ body {
 .english-topic-nav-btn:hover, .english-topic-nav-btn:focus-visible { border-color: var(--face-orange); background: #FFEDD5; outline: 2px solid #FDBA74; outline-offset: 1px; }
 .english-topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 18px 0 24px; }
 .english-topic-card { display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: #FFFFFF; box-shadow: var(--shadow-sm); scroll-margin-top: 100px; }
+.english-topic-card.completed { filter: grayscale(0.85); opacity: 0.78; }
 .english-topic-card-title { display: flex; align-items: center; gap: 12px; }
 .english-topic-card-title > span { font-size: 1.8rem; }
 .english-topic-card-title h3 { margin: 0 0 5px; color: var(--text-dark); font-size: 1rem; }
@@ -728,6 +741,17 @@ body {
 .english-result-panel h4 { margin: 0 0 8px; color: #9A3412; }
 .english-result-panel p { color: #475569; font-size: 0.88rem; line-height: 1.5; }
 .english-exam-controls .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.certificate-download-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 12px; }
+.certificate-download-actions .btn { min-width: 210px; }
+.certificate-lock-note { margin: 12px 0 4px; color: #64748B; font-size: 0.8rem; font-weight: 700; text-align: center; }
+.certificate-lock-panel { max-width: 960px; margin: 18px auto; padding: 22px; border: 1px solid #FED7AA; border-radius: var(--radius-lg); background: linear-gradient(120deg, #FFF7ED, #FFFFFF); box-shadow: var(--shadow-sm); }
+.certificate-lock-panel h3 { margin: 6px 0; color: #9A3412; font-family: var(--font-display); }
+.certificate-lock-panel > p { color: #64748B; font-size: 0.88rem; line-height: 1.55; }
+.certificate-level-checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 8px; padding: 0; list-style: none; }
+.certificate-level-checklist li { display: grid; grid-template-columns: 24px 1fr; gap: 2px 8px; padding: 9px 10px; border: 1px solid #E2E8F0; border-radius: var(--radius-md); color: #64748B; background: #FFFFFF; font-size: 0.76rem; }
+.certificate-level-checklist li > span { grid-row: span 2; font-size: 1rem; font-weight: 900; }
+.certificate-level-checklist li.done { color: #64748B; background: #F1F5F9; filter: grayscale(1); }
+.certificate-level-checklist li small { font-size: 0.69rem; }
 
 .aptitude-assessment-panel + .aptitude-assessment-panel { margin-top: 16px; }
 .aptitude-certificate-panel { text-align: center; background: #FFFDF9; border-color: #FDE68A; }
@@ -2238,6 +2262,7 @@ body {
 .mobile-nav-btn.active {
   color: var(--face-orange);
 }
+.mobile-nav-btn.completed:not(.active), .mobile-nav-btn.locked:not(.active) { color: #94A3B8; filter: grayscale(1); opacity: 0.72; }
 
 .mobile-nav-btn.active .m-icon {
   transform: scale(1.15);
@@ -2428,6 +2453,9 @@ body {
   color: #64748B;
   line-height: 1.35;
 }
+.badge-download-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.badge-download-actions .btn { min-height: 30px; padding: 5px 9px; font-size: 0.68rem; }
+.badge-locked-caption { color: #94A3B8; font-size: 0.68rem; }
 
 /* ==========================================================================
    CONFETTI & FLOATING TOAST
