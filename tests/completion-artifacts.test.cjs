@@ -128,6 +128,16 @@ test('Google authentication is the app entry point and uses the supplied Firebas
   assert.match(authModule, /browserLocalPersistence/);
 });
 
+test('only the verified allowlisted Google account receives admin access in UI and Firestore rules', () => {
+  const auth = fs.readFileSync(path.join(process.cwd(), 'firebase-auth.js'), 'utf8');
+  const rules = fs.readFileSync(path.join(process.cwd(), 'firestore.rules'), 'utf8');
+  const html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
+  assert.match(auth, /user\.emailVerified === true && user\.email\?\.toLowerCase\(\) === 'kapilnarula27july@gmail\.com'/);
+  assert.match(rules, /request\.auth\.token\.email_verified == true/);
+  assert.match(rules, /request\.auth\.token\.email == 'kapilnarula27july@gmail\.com'/);
+  assert.match(html, /id="homeAdminDashboardLink"[^>]*onclick="openAdminDashboard\(\)"/);
+});
+
 test('saved learner profiles are isolated by Firebase UID even when names match', () => {
   const api = loadApp();
   api.loadSavedState({ uid: 'google-user-one', displayName: 'Alex Student' });

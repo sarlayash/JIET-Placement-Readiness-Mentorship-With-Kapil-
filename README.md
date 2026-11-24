@@ -27,10 +27,10 @@ In Firebase Console for project `picture-connect-with-kapil`, enable **Authentic
 
 1. Create a Cloud Firestore database for project `picture-connect-with-kapil`.
 2. Deploy the included security rules with `firebase deploy --only firestore:rules --project picture-connect-with-kapil`.
-3. To grant admin access, have the admin sign in with Google once. In Firebase Authentication, copy that account's UID. In Firestore, create `admins/{UID}` with `active: true` and `role: "admin"`. Admin-role documents cannot be created or changed from the web app.
-4. The admin opens Profile → Admin dashboard to review learner records, download a CSV report, and lock or unlock learner profiles. Profile lock actions are recorded in `adminAudit`.
+3. The only admin account is the verified Google account `kapilnarula27july@gmail.com`; the app and Firestore rules both enforce this allowlist. Other Google accounts cannot access admin functions.
+4. After signing in with the allowlisted account, open **Admin dashboard** from the home page or Profile to review learner records, download a CSV report, and lock or unlock learner profiles. Profile lock actions are recorded in `adminAudit`.
 
-The dashboard does not use or display a shared `admin/admin` password. Admin permissions are attached to a Firebase-authenticated UID and checked by Firestore rules. Learner assessment answers, attempts, XP, badges, completion levels, certificates, and profile metadata are synced to `learners/{UID}`. Firestore locks are stored separately in `learnerLocks/{UID}` so learners cannot clear an admin lock from the client.
+The dashboard does not use or display a shared password. Admin access requires Firebase Authentication for the allowlisted, verified Google account, and Firestore rules enforce the same identity. Learner assessment answers, attempts, XP, badges, completion levels, certificates, and profile metadata are synced to `learners/{UID}`. Firestore locks are stored separately in `learnerLocks/{UID}` so learners cannot clear an admin lock from the client.
 
 ---
 

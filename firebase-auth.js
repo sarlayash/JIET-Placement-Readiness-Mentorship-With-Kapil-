@@ -123,23 +123,12 @@ try {
       window.handleFirebaseAuthState?.(null);
       return;
     }
-    getDoc(doc(db, 'admins', user.uid)).then(adminSnapshot => {
-      window.handleFirebaseAuthState?.({
-        uid: user.uid,
-        displayName: user.displayName || user.email?.split('@')[0] || 'Learner',
-        email: user.email || '',
-        photoURL: user.photoURL || '',
-        isAdmin: adminSnapshot.exists() && adminSnapshot.data().active === true
-      });
-    }).catch(error => {
-      window.handleFirebaseCloudError?.(error);
-      window.handleFirebaseAuthState?.({
-        uid: user.uid,
-        displayName: user.displayName || user.email?.split('@')[0] || 'Learner',
-        email: user.email || '',
-        photoURL: user.photoURL || '',
-        isAdmin: false
-      });
+    window.handleFirebaseAuthState?.({
+      uid: user.uid,
+      displayName: user.displayName || user.email?.split('@')[0] || 'Learner',
+      email: user.email || '',
+      photoURL: user.photoURL || '',
+      isAdmin: user.emailVerified === true && user.email?.toLowerCase() === 'kapilnarula27july@gmail.com'
     });
   }, error => window.handleFirebaseAuthError?.(error));
 } catch (error) {
