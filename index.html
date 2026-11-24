@@ -62,7 +62,7 @@
 
           <button id="badgesModalBtn" class="hud-btn badge-btn" title="View Earned Badges" aria-label="View Badges">
             <span>🏅</span>
-            <span class="badge-count-pill" id="badgeCount">0/32</span>
+            <span class="badge-count-pill" id="badgeCount">0/51</span>
           </button>
 
           <button id="profileSettingsBtn" class="hud-btn" title="Profile, Log Off & Reset Progress" aria-label="Profile Settings">
@@ -95,7 +95,7 @@
           <p class="hero-subtext">Crush corporate verbal aptitude tests (TCS, Infosys, Cognizant, Wipro, Accenture) with proactive sentence completion & para-jumble master strategies powered by FACE Prep.</p>
           <div class="hero-stats-row">
             <span class="stat-pill"><strong>500+</strong> Assessment Questions</span>
-            <span class="stat-pill"><strong>32</strong> Skill Badges</span>
+            <span class="stat-pill"><strong>51</strong> Skill Badges</span>
             <span class="stat-pill"><strong>100%</strong> Complete Coverage of Worksheet</span>
             <span class="stat-pill highlight-pill">📜 Official Certificate</span>
           </div>
@@ -147,6 +147,10 @@
       <button class="nav-tab certificate-tab-btn" data-tab="tab-certificate">
         <span class="tab-icon">🏆</span>
         <span class="tab-text">10. Certificates</span>
+      </button>
+      <button class="nav-tab" data-tab="tab-mock-center">
+        <span class="tab-icon">📝</span>
+        <span class="tab-text">Mock Exam Center</span>
       </button>
     </nav>
 
@@ -924,7 +928,7 @@
                 </div>
                 <div class="cert-stat">
                   <span class="cert-stat-label">Mastery Badges</span>
-                  <strong class="cert-stat-val" id="certBadgesEarned">0 of 32 Unlocked</strong>
+                  <strong class="cert-stat-val" id="certBadgesEarned">0 of 51 Unlocked</strong>
                 </div>
                 <div class="cert-stat">
                   <span class="cert-stat-label">Curriculum Code</span>
@@ -960,6 +964,27 @@
         </div>
         </div>
 
+      </section>
+
+      <section id="tab-mock-center" class="tab-pane">
+        <div class="section-header">
+          <div class="badge-chip">Timed • Proctored • Placement Practice</div>
+          <h2>Mock Exam Center</h2>
+          <p class="section-desc">Five timed mock assessments for every learning topic, progressing from Easy to Medium and Hard. Earn XP on each mock’s first completion; pass all five at 70% or above to unlock that topic’s badge and PNG/PDF certificate.</p>
+        </div>
+        <aside class="mock-proctor-notice"><strong>Camera-free proctoring</strong><span>Mocks run in fullscreen when supported. Leaving this tab or exiting fullscreen adds a warning. Three warnings lock this learner profile on this device for 24 hours. This browser-only profile lock is not a verified account-wide security control.</span></aside>
+        <div id="mockTopicGrid" class="mock-topic-grid"></div>
+        <section id="mockExamPanel" class="career-assessment-panel mock-exam-panel hidden" aria-live="polite">
+          <div class="english-exam-topline"><div><span class="badge-chip">Proctored mock</span><h3 id="mockExamTitle">Mock assessment</h3></div><div class="english-timer" id="mockTimer" role="timer" aria-live="off">00:00</div></div>
+          <p id="mockAnsweredCount" class="career-assessment-progress">0 answered</p>
+          <div class="english-exam-progress-track"><div id="mockQuestionProgress"></div></div>
+          <p id="mockQuestionPosition">Question 1 of 10</p>
+          <p id="mockViolationNotice" class="mock-violation-notice hidden" role="alert"></p>
+          <div id="mockQuestionMount"></div>
+          <div class="english-exam-controls"><button class="btn btn-secondary" id="mockPreviousBtn" type="button" onclick="moveMockQuestion(-1)">← Previous</button><button class="btn btn-primary" id="mockNextBtn" type="button" onclick="moveMockQuestion(1)">Next →</button></div>
+          <div class="english-exam-submit-row"><button class="btn btn-primary" type="button" onclick="submitMockAssessment()">Submit mock assessment</button></div>
+          <div id="mockAssessmentResult" class="english-result-panel hidden" aria-live="polite"></div>
+        </section>
       </section>
 
     </main>
@@ -1005,6 +1030,10 @@
       <button class="mobile-nav-btn" data-tab="tab-certificate">
         <span class="m-icon">🏆</span>
         <span class="m-label">Certificates</span>
+      </button>
+      <button class="mobile-nav-btn" data-tab="tab-mock-center">
+        <span class="m-icon">📝</span>
+        <span class="m-label">Mocks</span>
       </button>
     </nav>
 
@@ -1066,7 +1095,7 @@
               <div class="profile-stats-row">
                 <span class="profile-stat-badge" id="profileStatXP">⚡ 0 XP</span>
                 <span class="profile-stat-badge" id="profileStatLevel">⭐ Level 1</span>
-                <span class="profile-stat-badge" id="profileStatBadges">🏅 0/32 Badges</span>
+                <span class="profile-stat-badge" id="profileStatBadges">🏅 0/51 Badges</span>
               </div>
             </div>
           </div>
@@ -1102,6 +1131,10 @@
 
     <!-- Floating XP & Alert Toast -->
     <div id="toastNotification" class="toast-popup hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div id="proctorLockOverlay" class="proctor-lock-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="proctorLockTitle">
+      <section class="proctor-lock-card"><span class="badge-chip">24-hour profile lock</span><h2 id="proctorLockTitle">Mock assessment access paused</h2><p>Three proctor warnings were recorded. This learner profile is paused on this browser until the countdown ends. No camera or identity recording was used.</p><div id="proctorLockCountdown" class="proctor-lock-countdown">24:00:00</div><small>The local device lock is not an account-wide security control.</small></section>
+    </div>
 
   </div>
 

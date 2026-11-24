@@ -6,10 +6,14 @@ const path = require('node:path');
 
 function loadApp() {
   const root = process.cwd();
+  const elements = new Map();
   const document = {
     addEventListener() {},
     createElement() { return { click() {}, set href(value) { this._href = value; }, set download(value) { this._download = value; } }; },
-    getElementById() { return null; },
+    getElementById(id) {
+      if (!elements.has(id)) elements.set(id, { classList: { add() {}, remove() {}, toggle() {} }, textContent: '', className: '' });
+      return elements.get(id);
+    },
     querySelector() { return null; },
     querySelectorAll() { return []; }
   };
@@ -35,7 +39,7 @@ function loadApp() {
   const scripts = ['career-curriculum.js', 'english-curriculum.js', 'app.js']
     .map(file => fs.readFileSync(path.join(root, file), 'utf8'))
     .join('\n');
-  vm.runInContext(`${scripts}\nglobalThis.__testApi = { state, BADGES_CONFIG, LEVEL_BADGES, CAREER_ASSESSMENTS, FOUNDATION_ASSESSMENT, PROACTIVE_DRILLS, POS_DRILLS, SENTENCE_PAGE_1, SENTENCE_PAGE_2, PARAJUMBLES_PAGE_1, PARAJUMBLES_PAGE_2_3, CLOZE_QUESTIONS, APTITUDE_QUESTIONS, ENGLISH_TOPICS, getLearningLevelProgress, getNewLevelBadges, areAllLearningLevelsComplete, imageCanvasToPdfBlob, downloadCanvasArtifact, downloadTrackCertificate, downloadEnglishCertificate, downloadCertificatePNG }; globalThis.__testApi.__context = globalThis;`, context, { filename: 'app-test.vm.js' });
+  vm.runInContext(`${scripts}\nglobalThis.__testApi = { state, BADGES_CONFIG, LEVEL_BADGES, CAREER_ASSESSMENTS, FOUNDATION_ASSESSMENT, PROACTIVE_DRILLS, POS_DRILLS, SENTENCE_PAGE_1, SENTENCE_PAGE_2, PARAJUMBLES_PAGE_1, PARAJUMBLES_PAGE_2_3, CLOZE_QUESTIONS, APTITUDE_QUESTIONS, ENGLISH_TOPICS, MOCK_TOPICS, MOCK_DIFFICULTIES, getMockQuestions, getMockOptions, getLearningLevelProgress, getNewLevelBadges, areAllLearningLevelsComplete, recordProctorViolation, resetProctorDebounce() { lastProctorViolationAt = 0; }, imageCanvasToPdfBlob, downloadCanvasArtifact, downloadTrackCertificate, downloadEnglishCertificate, downloadCertificatePNG }; globalThis.__testApi.__context = globalThis;`, context, { filename: 'app-test.vm.js' });
   return context.__testApi;
 }
 
@@ -81,7 +85,48 @@ test('each passed level awards exactly its own level badge', () => {
   api.state.unlockedBadges.add('level_foundations');
   assert.equal(api.getNewLevelBadges(levels).length, 0);
   assert.equal(api.LEVEL_BADGES.length, 10);
-  assert.equal(api.BADGES_CONFIG.length, 32);
+  assert.equal(api.BADGES_CONFIG.length, 51);
+});
+
+test('five timed mock assessments cover every curriculum topic from easy through hard', () => {
+  const api = loadApp();
+  assert.equal(api.MOCK_TOPICS.length, 19);
+  assert.equal(api.MOCK_TOPICS.length * api.MOCK_DIFFICULTIES.length, 95);
+  assert.deepEqual(Array.from(api.MOCK_DIFFICULTIES, item => item.label), ['Easy I', 'Easy II', 'Medium I', 'Medium II', 'Hard']);
+  assert.ok(api.MOCK_DIFFICULTIES.every((item, index, all) => index === 0 || item.secondsPerQuestion < all[index - 1].secondsPerQuestion));
+  api.MOCK_TOPICS.forEach(topic => {
+    api.MOCK_DIFFICULTIES.forEach((_, index) => {
+      const mock = api.getMockQuestions(topic, index);
+      assert.ok(mock.length > 0 && mock.length <= 10, `${topic.title} Mock ${index + 1} has usable questions`);
+      assert.equal(new Set(mock.map(question => question.id)).size, mock.length, `${topic.title} Mock ${index + 1} has no duplicate questions`);
+    });
+    const first = topic.questions.find(question => question.options?.length > 1);
+    assert.notDeepEqual(Array.from(api.getMockOptions(first, 0), option => option.text), Array.from(api.getMockOptions(first, 1), option => option.text), `${topic.title} variants shuffle answer positions`);
+  });
+  assert.equal(api.BADGES_CONFIG.length, 51);
+});
+
+test('Mock Center is reachable from both navigation bars with unique page IDs', () => {
+  const html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
+  const ids = Array.from(html.matchAll(/\bid="([^"]+)"/g), match => match[1]);
+  const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+  assert.deepEqual(duplicates, []);
+  assert.match(html, /class="nav-tab" data-tab="tab-mock-center"/);
+  assert.match(html, /class="mobile-nav-btn" data-tab="tab-mock-center"/);
+  assert.match(html, /id="tab-mock-center" class="tab-pane"/);
+  assert.match(html, /id="proctorLockOverlay"/);
+});
+
+test('three proctor warnings suspend the active learner profile for 24 hours', () => {
+  const api = loadApp();
+  api.state.activeMockAssessment = { violations: 0 };
+  for (let index = 0; index < 3; index++) {
+    api.resetProctorDebounce();
+    api.recordProctorViolation('test visibility change');
+  }
+  assert.equal(api.state.activeMockAssessment, null);
+  assert.ok(api.state.proctorLockUntil - Date.now() > 23 * 60 * 60 * 1000);
+  assert.equal(api.state.proctorViolationCount, 3);
 });
 
 test('a level is incomplete until every question is answered and 70% is reached', () => {

@@ -752,6 +752,30 @@ body {
 .certificate-level-checklist li > span { grid-row: span 2; font-size: 1rem; font-weight: 900; }
 .certificate-level-checklist li.done { color: #64748B; background: #F1F5F9; filter: grayscale(1); }
 .certificate-level-checklist li small { font-size: 0.69rem; }
+.mock-proctor-notice { display: flex; flex-direction: column; gap: 5px; margin: 18px 0; padding: 14px 16px; border: 1px solid #FED7AA; border-radius: var(--radius-md); color: #7C2D12; background: #FFF7ED; font-size: 0.82rem; line-height: 1.5; }
+.mock-topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 390px), 1fr)); gap: 16px; margin: 18px 0 28px; }
+.mock-topic-card { padding: 17px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: #fff; box-shadow: var(--shadow-sm); }
+.mock-topic-heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.mock-topic-heading > span { font-size: 1.8rem; }
+.mock-topic-heading h3 { margin: 0 0 4px; color: var(--text-dark); font-size: 1rem; }
+.mock-topic-heading p { margin: 0; color: #64748B; font-size: 0.76rem; line-height: 1.45; }
+.mock-set-list { display: grid; gap: 7px; }
+.mock-set-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border: 1px solid #E2E8F0; border-radius: var(--radius-md); background: #F8FAFC; }
+.mock-set-card.passed { filter: grayscale(0.75); opacity: 0.78; }
+.mock-set-card > div { display: flex; flex-direction: column; gap: 3px; }
+.mock-set-card strong { color: #334155; font-size: 0.8rem; }
+.mock-set-card span { color: #64748B; font-size: 0.7rem; }
+.mock-set-card .btn { min-height: 34px; padding: 6px 12px; font-size: 0.74rem; }
+.mock-exam-panel { scroll-margin-top: 18px; }
+.mock-exam-panel .english-exam-progress-track #mockQuestionProgress { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #F97316, #FDBA74); transition: width 0.2s ease; }
+.mock-violation-notice { padding: 10px 12px; border: 1px solid #FCA5A5; border-radius: var(--radius-md); color: #991B1B; background: #FEF2F2; font-size: 0.82rem; font-weight: 750; }
+.proctor-lock-overlay { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; padding: 20px; background: rgba(15, 23, 42, 0.92); }
+.proctor-lock-overlay.hidden { display: none; }
+.proctor-lock-card { width: min(100%, 520px); padding: 28px; border: 1px solid #FED7AA; border-radius: 20px; background: #fff; text-align: center; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3); }
+.proctor-lock-card h2 { margin: 14px 0 8px; color: #7C2D12; font-family: var(--font-display); }
+.proctor-lock-card p { color: #475569; font-size: 0.9rem; line-height: 1.6; }
+.proctor-lock-countdown { margin: 18px 0; color: #C2410C; font: 800 clamp(2.5rem, 10vw, 4rem)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.proctor-lock-card small { color: #64748B; }
 
 .aptitude-assessment-panel + .aptitude-assessment-panel { margin-top: 16px; }
 .aptitude-certificate-panel { text-align: center; background: #FFFDF9; border-color: #FDE68A; }

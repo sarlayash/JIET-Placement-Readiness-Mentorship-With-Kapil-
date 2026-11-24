@@ -51,7 +51,7 @@
 
 - **⚡ Placement XP:** Earn XP for correct answers, time bonuses, and mastery milestones.
 - **🔥 Streaks:** Streak multipliers for consecutive correct solutions.
-- **🏅 14 Placement Readiness Badges:**
+- **🏅 51 Placement Readiness Badges:**
   - 🚀 *Fresh Recruit*
   - 🔍 *Signpost Detective*
   - 💡 *Proactive Thinker*
@@ -66,8 +66,16 @@
   - 🧠 *Reasoning Ace*
   - 📊 *Data Analyst*
   - 🔷 *Spatial Solver*
+  - Eight English topic badges, ten level-completion badges, and nineteen topic mock-master badges
 - **🔊 Sound FX:** Real-time synthesized web audio effects.
 - **🎊 Confetti:** Celebratory canvas confetti particle physics.
+
+## 📝 Mock Exam Center
+
+- Five timed mock forms are available for each learning topic, from Easy through Medium to Hard.
+- Each mock awards XP once on its first completion. Passing all five forms in a topic at 70% or higher unlocks that topic's badge and PNG/PDF certificate.
+- Camera-free proctoring uses fullscreen and page visibility when the browser supports them. Three warnings pause that learner profile on this browser for 24 hours.
+- Learner profiles and the 24-hour pause are stored locally in the browser. There is no account service, so the local pause does not provide server-enforced, cross-device account security.
 
 ---
 

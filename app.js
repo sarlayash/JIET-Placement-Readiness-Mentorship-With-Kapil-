@@ -19,6 +19,10 @@ const state = {
   answeredQuestions: {}, // { qId: { correct: bool, choice: string } }
   englishAssessments: {},
   activeEnglishAssessment: null,
+  mockAssessments: {},
+  activeMockAssessment: null,
+  proctorLockUntil: 0,
+  proctorViolationCount: 0,
   activeTab: 'tab-concepts',
   rahulOrder: [5, 1, 8, 3, 7, 2, 9, 4, 6] // start scrambled so the timeline cannot be claimed untouched
 };
@@ -63,7 +67,6 @@ const BADGES_CONFIG = [
   ...LEVEL_BADGES
 ];
 
-const BADGE_TOTAL = BADGES_CONFIG.length;
 const APTITUDE_QUESTIONS = [
   ...CAREER_ASSESSMENTS.quantitative,
   ...CAREER_ASSESSMENTS.reasoning,
@@ -978,6 +981,41 @@ const CLOZE_QUESTIONS = [
 // ==========================================
 // 3. GAMIFICATION & LOCAL STORAGE
 // ==========================================
+const MOCK_DIFFICULTIES = [
+  { label: 'Easy I', secondsPerQuestion: 100 },
+  { label: 'Easy II', secondsPerQuestion: 90 },
+  { label: 'Medium I', secondsPerQuestion: 75 },
+  { label: 'Medium II', secondsPerQuestion: 65 },
+  { label: 'Hard', secondsPerQuestion: 55 }
+];
+const MOCK_TOPICS = [
+  { id: 'foundations', title: 'Concept Foundations', icon: '📖', questions: FOUNDATION_ASSESSMENT },
+  { id: 'drills', title: 'Proactive & Grammar Drills', icon: '🎯', questions: [...PROACTIVE_DRILLS, ...POS_DRILLS] },
+  { id: 'sentences', title: 'Sentence Completion', icon: '✍️', questions: [...SENTENCE_PAGE_1, ...SENTENCE_PAGE_2] },
+  { id: 'parajumbles', title: 'Para-Jumbles', icon: '🧩', questions: [...PARAJUMBLES_PAGE_1, ...PARAJUMBLES_PAGE_2_3] },
+  { id: 'cloze', title: 'Passage Cloze', icon: '🧪', questions: CLOZE_QUESTIONS },
+  { id: 'softSkills', title: 'Soft Skills', icon: '🤝', questions: CAREER_ASSESSMENTS.softSkills },
+  { id: 'communication', title: 'Professional Communication', icon: '💬', questions: CAREER_ASSESSMENTS.communication },
+  { id: 'quantitative', title: 'Quantitative Aptitude', icon: '➗', questions: CAREER_ASSESSMENTS.quantitative },
+  { id: 'reasoning', title: 'Logical Reasoning', icon: '🧠', questions: CAREER_ASSESSMENTS.reasoning },
+  { id: 'dataInterpretation', title: 'Data Interpretation', icon: '📊', questions: CAREER_ASSESSMENTS.dataInterpretation },
+  { id: 'spatialReasoning', title: 'Spatial Reasoning', icon: '🔷', questions: CAREER_ASSESSMENTS.spatialReasoning },
+  ...ENGLISH_TOPICS.map(topic => ({ id: topic.id, title: topic.title, icon: topic.icon, questions: ENGLISH_ASSESSMENTS[topic.id] }))
+];
+const MOCK_CERTIFICATE_BADGES = MOCK_TOPICS.map(topic => ({
+  id: `mock_${topic.id}`,
+  icon: topic.icon,
+  title: `${topic.title} Mock Master`,
+  desc: `Passed all five timed mock assessments for ${topic.title}.`
+}));
+BADGES_CONFIG.push(...MOCK_CERTIFICATE_BADGES);
+const BADGE_TOTAL = BADGES_CONFIG.length;
+const MOCK_QUESTION_LOOKUP = new Map(MOCK_TOPICS.flatMap(topic => topic.questions.map(question => [question.id, question])));
+const PROCTOR_VIOLATION_LIMIT = 3;
+const PROCTOR_LOCK_DURATION = 24 * 60 * 60 * 1000;
+let mockTimerInterval = null;
+let lastProctorViolationAt = 0;
+
 function normalizeProfileId(name) {
   return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 }
@@ -1002,6 +1040,10 @@ function createFreshLearnerState(name = 'Learner') {
   state.answeredQuestions = {};
   state.englishAssessments = {};
   state.activeEnglishAssessment = null;
+  state.mockAssessments = {};
+  state.activeMockAssessment = null;
+  state.proctorLockUntil = 0;
+  state.proctorViolationCount = 0;
   state.rahulOrder = [5, 1, 8, 3, 7, 2, 9, 4, 6];
 }
 
@@ -1043,7 +1085,7 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     : fallbackName;
   const validTabs = new Set([
     'tab-concepts', 'tab-drills', 'tab-sentences', 'tab-parajumbles', 'tab-cloze',
-    'tab-soft-skills', 'tab-communication', 'tab-aptitude', 'tab-english', 'tab-certificate'
+    'tab-soft-skills', 'tab-communication', 'tab-aptitude', 'tab-english', 'tab-certificate', 'tab-mock-center'
   ]);
   const savedEnglish = safeData.englishAssessments && typeof safeData.englishAssessments === 'object' && !Array.isArray(safeData.englishAssessments)
     ? Object.fromEntries(Object.entries(safeData.englishAssessments).filter(([topicId, result]) =>
@@ -1071,6 +1113,48 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
       hintOpen: Boolean(activeAttempt.hintOpen)
     }
     : null;
+  const validMockIds = new Set(MOCK_TOPICS.flatMap(topic => MOCK_DIFFICULTIES.map((_, index) => `${topic.id}:${index + 1}`)));
+  const savedMocks = safeData.mockAssessments && typeof safeData.mockAssessments === 'object' && !Array.isArray(safeData.mockAssessments)
+    ? Object.fromEntries(Object.entries(safeData.mockAssessments).filter(([id, result]) => {
+      const topic = MOCK_TOPICS.find(item => item.id === id.split(':')[0]);
+      return validMockIds.has(id) && topic && result && Number.isFinite(Number(result.bestCorrect)) && Number(result.bestCorrect) >= 0 && Number(result.bestCorrect) <= Math.min(10, topic.questions.length);
+    }).map(([id, result]) => {
+      const count = Math.min(10, MOCK_TOPICS.find(topic => topic.id === id.split(':')[0]).questions.length);
+      const bestCorrect = Math.floor(Number(result.bestCorrect));
+      return [id, {
+        bestCorrect,
+        bestPercent: Math.round(bestCorrect / count * 100),
+        attempts: Math.max(1, Math.floor(Number(result.attempts) || 1)),
+        passed: bestCorrect >= Math.ceil(count * 0.7),
+        xpAwarded: Boolean(result.xpAwarded),
+        completedAt: typeof result.completedAt === 'string' ? result.completedAt : '',
+        certificateId: typeof result.certificateId === 'string' && /^JIET-\d{4}-[A-F0-9]{16}$/.test(result.certificateId) ? result.certificateId : generateCertificateId()
+      }];
+    }))
+    : {};
+  const activeMock = safeData.activeMockAssessment;
+  const activeMockId = activeMock && `${activeMock.topicId}:${Number(activeMock.mockIndex) + 1}`;
+  const activeMockTopic = activeMock && MOCK_TOPICS.find(topic => topic.id === activeMock.topicId);
+  const activeMockQuestionIds = new Set(activeMockTopic?.questions.map(question => question.id) || []);
+  const validActiveMock = activeMock && validMockIds.has(activeMockId) && activeMockTopic && Number.isFinite(Number(activeMock.startedAt))
+    ? {
+      topicId: activeMock.topicId,
+      mockIndex: Math.max(0, Math.min(4, Math.floor(Number(activeMock.mockIndex) || 0))),
+      startedAt: Math.min(Date.now(), Number(activeMock.startedAt)),
+      durationMs: Math.max(60_000, Math.min(60 * 60 * 1000, Math.floor(Number(activeMock.durationMs) || 10 * 60 * 1000))),
+      questionIds: Array.isArray(activeMock.questionIds) ? activeMock.questionIds.filter(id => activeMockQuestionIds.has(id)).slice(0, 10) : [],
+      index: Math.max(0, Math.min(9, Math.floor(Number(activeMock.index) || 0))),
+      answers: Object.fromEntries(Object.entries(activeMock.answers || {}).filter(([id, key]) => {
+        const question = MOCK_QUESTION_LOOKUP.get(id);
+        return activeMockQuestionIds.has(id) && question?.options?.some(option => option.key === key);
+      })),
+      violations: Math.max(0, Math.min(PROCTOR_VIOLATION_LIMIT - 1, Math.floor(Number(activeMock.violations) || 0)))
+    }
+    : null;
+  const proctorLockUntil = Number.isFinite(Number(safeData.proctorLockUntil))
+    ? Math.max(0, Math.min(Date.now() + PROCTOR_LOCK_DURATION, Number(safeData.proctorLockUntil)))
+    : 0;
+  const proctorViolationCount = Math.max(0, Math.min(PROCTOR_VIOLATION_LIMIT - 1, Math.floor(Number(safeData.proctorViolationCount) || 0)));
 
   return {
     learnerName: name,
@@ -1086,6 +1170,10 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     answeredQuestions: answers,
     englishAssessments: savedEnglish,
     activeEnglishAssessment: validActiveAttempt,
+    mockAssessments: savedMocks,
+    activeMockAssessment: validActiveMock,
+    proctorLockUntil,
+    proctorViolationCount,
     rahulOrder: safeOrder,
     activeTab: validTabs.has(safeData.activeTab) ? safeData.activeTab : 'tab-concepts'
   };
@@ -1104,6 +1192,10 @@ function applyLearnerState(data, fallbackName) {
   state.answeredQuestions = safeData.answeredQuestions;
   state.englishAssessments = safeData.englishAssessments;
   state.activeEnglishAssessment = safeData.activeEnglishAssessment;
+  state.mockAssessments = safeData.mockAssessments;
+  state.activeMockAssessment = safeData.activeMockAssessment;
+  state.proctorLockUntil = safeData.proctorLockUntil;
+  state.proctorViolationCount = safeData.proctorViolationCount;
   state.rahulOrder = safeData.rahulOrder;
   state.activeTab = safeData.activeTab;
 }
@@ -1176,6 +1268,10 @@ function persistState() {
       answeredQuestions: state.answeredQuestions,
       englishAssessments: state.englishAssessments,
       activeEnglishAssessment: state.activeEnglishAssessment,
+      mockAssessments: state.mockAssessments,
+      activeMockAssessment: state.activeMockAssessment,
+      proctorLockUntil: state.proctorLockUntil,
+      proctorViolationCount: state.proctorViolationCount,
       rahulOrder: state.rahulOrder,
       activeTab: state.activeTab
     };
@@ -1622,6 +1718,256 @@ function recordFinalCertificateDownload() {
   state.certificateIssued = true;
   updateHUD();
   persistState();
+}
+
+function getMockId(topicId, mockIndex) { return `${topicId}:${mockIndex + 1}`; }
+
+function getMockQuestions(topic, mockIndex) {
+  const available = topic.questions.filter(question => question.id && question.answer && Array.isArray(question.options) && question.options.length >= 2);
+  const count = Math.min(10, available.length);
+  if (!count) return [];
+  const complexity = question => {
+    const promptLength = String(question.prompt || '').replace(/<[^>]*>/g, '').length;
+    const optionLength = question.options.reduce((sum, option) => sum + String(option.text || '').length, 0) / question.options.length;
+    const fragmentCount = question.fragments?.length || 0;
+    return promptLength + optionLength * 0.6 + fragmentCount * 40;
+  };
+  const ordered = [...available].sort((left, right) => complexity(left) - complexity(right));
+  const start = Math.round((mockIndex / (MOCK_DIFFICULTIES.length - 1)) * (ordered.length - count));
+  return ordered.slice(start, start + count);
+}
+
+function getMockOptions(question, mockIndex) {
+  const options = question.options || [];
+  if (options.length < 2) return options;
+  const shift = mockIndex % options.length;
+  return [...options.slice(shift), ...options.slice(0, shift)];
+}
+
+function getMockTopicProgress(topicId) {
+  const records = MOCK_DIFFICULTIES.map((_, index) => state.mockAssessments[getMockId(topicId, index)]);
+  return { records, passed: records.filter(result => result?.passed).length, total: MOCK_DIFFICULTIES.length };
+}
+
+function renderMockCenter() {
+  const root = document.getElementById('mockTopicGrid');
+  if (!root) return;
+  root.innerHTML = MOCK_TOPICS.map(topic => {
+    const progress = getMockTopicProgress(topic.id);
+    const passedAll = progress.passed === progress.total;
+    const seriesBadge = MOCK_CERTIFICATE_BADGES.find(badge => badge.id === `mock_${topic.id}`);
+    if (passedAll && !state.unlockedBadges.has(seriesBadge.id)) unlockBadge(seriesBadge.id);
+    const mocks = MOCK_DIFFICULTIES.map((difficulty, index) => {
+      const result = progress.records[index];
+      const locked = state.proctorLockUntil > Date.now();
+      const resume = state.activeMockAssessment?.topicId === topic.id && state.activeMockAssessment.mockIndex === index;
+      return `<article class="mock-set-card ${result?.passed ? 'passed' : ''}"><div><strong>Mock ${index + 1} · ${difficulty.label}</strong><span>${Math.min(10, topic.questions.length)} questions · ${Math.ceil(Math.min(10, topic.questions.length) * difficulty.secondsPerQuestion / 60)} min · ${result ? `Best ${result.bestPercent}%` : 'Not attempted'}</span></div><button class="btn ${result?.passed ? 'btn-secondary' : 'btn-primary'}" type="button" ${locked ? 'disabled' : ''} onclick="startMockAssessment('${topic.id}', ${index})">${resume ? 'Resume mock' : result ? 'Retake' : 'Start'}</button></article>`;
+    }).join('');
+    const certificateActions = passedAll
+      ? `<div class="certificate-download-actions"><button class="btn btn-secondary" type="button" onclick="downloadMockCertificate('${topic.id}', 'png')">📥 Topic certificate (PNG)</button><button class="btn btn-secondary" type="button" onclick="downloadMockCertificate('${topic.id}', 'pdf')">📄 Topic certificate (PDF)</button></div>`
+      : `<p class="certificate-lock-note">Pass all five mocks at 70% or higher to unlock the ${escapeEnglishHTML(seriesBadge.title)} badge and topic certificates.</p>`;
+    return `<section class="mock-topic-card"><div class="mock-topic-heading"><span>${escapeEnglishHTML(topic.icon)}</span><div><h3>${escapeEnglishHTML(topic.title)}</h3><p>${progress.passed}/${progress.total} mocks passed · 70% to pass · first completion earns XP</p></div></div><div class="mock-set-list">${mocks}</div>${certificateActions}</section>`;
+  }).join('');
+}
+
+function startMockAssessment(topicId, mockIndex) {
+  if (state.proctorLockUntil > Date.now()) { renderProctorLockScreen(); return; }
+  const topic = MOCK_TOPICS.find(item => item.id === topicId);
+  const difficulty = MOCK_DIFFICULTIES[mockIndex];
+  if (!topic || !difficulty) return;
+  if (state.activeMockAssessment && (state.activeMockAssessment.topicId !== topicId || state.activeMockAssessment.mockIndex !== mockIndex)) {
+    recordProctorViolation('starting a different mock before submitting the active one');
+    return;
+  }
+  if (!confirm(`Timed, camera-free proctoring is active for ${topic.title}, Mock ${mockIndex + 1} (${difficulty.label}). Keep this tab visible and stay in fullscreen. Three visibility/fullscreen violations lock this local learner profile for 24 hours. Continue?`)) return;
+  const begin = () => {
+    if (!state.activeMockAssessment || state.activeMockAssessment.topicId !== topicId || state.activeMockAssessment.mockIndex !== mockIndex) {
+      const questions = getMockQuestions(topic, mockIndex);
+      state.activeMockAssessment = {
+        topicId,
+        mockIndex,
+        startedAt: Date.now(),
+        durationMs: questions.length * difficulty.secondsPerQuestion * 1000,
+        questionIds: questions.map(question => question.id),
+        index: 0,
+        answers: {},
+        violations: 0
+      };
+    }
+    state.activeTab = 'tab-mock-center';
+    persistState();
+    switchTab('tab-mock-center');
+    renderMockExam();
+    document.getElementById('mockExamPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  if (!document.fullscreenElement && document.documentElement?.requestFullscreen && document.fullscreenEnabled) {
+    document.documentElement.requestFullscreen().then(begin).catch(() => showToast('Fullscreen permission is needed to start this proctored mock.'));
+  } else begin();
+}
+
+function renderMockExam() {
+  const attempt = state.activeMockAssessment;
+  if (!attempt) return;
+  const topic = MOCK_TOPICS.find(item => item.id === attempt.topicId);
+  const questions = attempt.questionIds.map(id => MOCK_QUESTION_LOOKUP.get(id)).filter(Boolean);
+  const question = questions[attempt.index];
+  const panel = document.getElementById('mockExamPanel');
+  if (!topic || !question || !panel) return;
+  panel.classList.remove('hidden');
+  document.getElementById('mockAssessmentResult').classList.add('hidden');
+  document.getElementById('mockExamTitle').textContent = `${topic.title} · Mock ${attempt.mockIndex + 1} · ${MOCK_DIFFICULTIES[attempt.mockIndex].label}`;
+  document.getElementById('mockQuestionPosition').textContent = `Question ${attempt.index + 1} of ${questions.length}`;
+  document.getElementById('mockQuestionProgress').style.width = `${Math.round((Object.keys(attempt.answers).length / questions.length) * 100)}%`;
+  const mount = document.getElementById('mockQuestionMount');
+  const displayOptions = getMockOptions(question, attempt.mockIndex);
+  mount.innerHTML = `<article class="english-question-card"><div class="question-top-meta"><span>${escapeEnglishHTML(question.qNum || `Question ${attempt.index + 1}`)}</span><span class="badge-chip">${escapeEnglishHTML(MOCK_DIFFICULTIES[attempt.mockIndex].label)} · No hints</span></div><h4>${escapeEnglishHTML(question.prompt)}</h4><div class="english-option-list">${displayOptions.map(option => `<button type="button" class="english-option-btn ${attempt.answers[question.id] === option.key ? 'selected' : ''}" data-choice="${escapeEnglishHTML(option.key)}" aria-pressed="${attempt.answers[question.id] === option.key}"><span class="english-option-key">${escapeEnglishHTML(option.key.toUpperCase())}</span><span>${escapeEnglishHTML(option.text)}</span></button>`).join('')}</div></article>`;
+  mount.querySelectorAll('.english-option-btn').forEach(button => button.addEventListener('click', () => {
+    attempt.answers[question.id] = button.dataset.choice;
+    persistState();
+    renderMockExam();
+  }));
+  document.getElementById('mockPreviousBtn').disabled = attempt.index === 0;
+  document.getElementById('mockNextBtn').disabled = attempt.index === questions.length - 1;
+  document.getElementById('mockAnsweredCount').textContent = `${Object.keys(attempt.answers).length}/${questions.length} answered · ${state.proctorViolationCount}/${PROCTOR_VIOLATION_LIMIT} profile warnings`;
+  if (mockTimerInterval) clearInterval(mockTimerInterval);
+  const tick = () => {
+    if (!state.activeMockAssessment) { clearInterval(mockTimerInterval); mockTimerInterval = null; return; }
+    const seconds = Math.max(0, Math.ceil((attempt.durationMs - (Date.now() - attempt.startedAt)) / 1000));
+    const timer = document.getElementById('mockTimer');
+    if (timer) {
+      timer.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+      timer.classList.toggle('urgent', seconds <= 60);
+    }
+    if (!seconds) finishMockAssessment(true);
+  };
+  tick();
+  if (state.activeMockAssessment) mockTimerInterval = setInterval(tick, 1000);
+}
+
+function moveMockQuestion(step) {
+  if (!state.activeMockAssessment) return;
+  const questions = getMockQuestions(MOCK_TOPICS.find(topic => topic.id === state.activeMockAssessment.topicId), state.activeMockAssessment.mockIndex);
+  state.activeMockAssessment.index = Math.max(0, Math.min(questions.length - 1, state.activeMockAssessment.index + step));
+  persistState();
+  renderMockExam();
+}
+
+function submitMockAssessment() {
+  if (!state.activeMockAssessment) return;
+  const count = state.activeMockAssessment.questionIds.length;
+  const unanswered = count - Object.keys(state.activeMockAssessment.answers).length;
+  if (unanswered && !confirm(`${unanswered} question${unanswered === 1 ? '' : 's'} unanswered. Submit now? They count as incorrect.`)) return;
+  finishMockAssessment(false);
+}
+
+function finishMockAssessment(timesUp) {
+  const attempt = state.activeMockAssessment;
+  if (!attempt) return;
+  if (mockTimerInterval) clearInterval(mockTimerInterval);
+  mockTimerInterval = null;
+  const topic = MOCK_TOPICS.find(item => item.id === attempt.topicId);
+  const questions = attempt.questionIds.map(id => MOCK_QUESTION_LOOKUP.get(id)).filter(Boolean);
+  const correct = questions.filter(question => attempt.answers[question.id] === question.answer).length;
+  const mockId = getMockId(attempt.topicId, attempt.mockIndex);
+  const previous = state.mockAssessments[mockId];
+  const bestCorrect = Math.max(previous?.bestCorrect || 0, correct);
+  const result = {
+    bestCorrect,
+    bestPercent: Math.round(bestCorrect / questions.length * 100),
+    attempts: (previous?.attempts || 0) + 1,
+    passed: bestCorrect >= Math.ceil(questions.length * 0.7),
+    xpAwarded: Boolean(previous?.xpAwarded),
+    completedAt: new Date().toISOString(),
+    certificateId: previous?.certificateId || generateCertificateId()
+  };
+  state.mockAssessments[mockId] = result;
+  state.activeMockAssessment = null;
+  const newXP = result.xpAwarded ? 0 : correct * 5 + 10;
+  result.xpAwarded = true;
+  const topicProgress = getMockTopicProgress(topic.id);
+  if (topicProgress.passed === topicProgress.total) unlockBadge(`mock_${topic.id}`);
+  updateHUD();
+  if (newXP) addXP(newXP, `Mock assessment: ${correct}/${questions.length} correct`);
+  else persistState();
+  const resultNode = document.getElementById('mockAssessmentResult');
+  resultNode.classList.remove('hidden');
+  resultNode.innerHTML = `<h3>${timesUp ? '⏱️ Time is up' : 'Mock complete'} · ${escapeEnglishHTML(topic.title)}</h3><p>Score: <strong>${correct}/${questions.length} (${Math.round(correct / questions.length * 100)}%)</strong> · Personal best: <strong>${result.bestPercent}%</strong></p><p>${result.passed ? '✅ Mock passed. Best scores of 70% or higher count toward your topic badge and certificate.' : 'Review the topic lessons and retry this mock to reach 70%.'} XP awarded this mock: <strong>${newXP}</strong></p><button class="btn btn-primary" type="button" onclick="startMockAssessment('${topic.id}', ${attempt.mockIndex})">↻ Retake mock</button>`;
+  renderMockCenter();
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  showToast(`Mock assessment complete: ${correct}/${questions.length} correct.`);
+}
+
+function recordProctorViolation(reason) {
+  const attempt = state.activeMockAssessment;
+  const now = Date.now();
+  if (!attempt || now - lastProctorViolationAt < 1500) return;
+  lastProctorViolationAt = now;
+  attempt.violations += 1;
+  state.proctorViolationCount = Math.min(PROCTOR_VIOLATION_LIMIT, state.proctorViolationCount + 1);
+  document.getElementById('mockViolationNotice').textContent = `Proctor warning ${state.proctorViolationCount}/${PROCTOR_VIOLATION_LIMIT}: ${reason}. Keep the exam tab visible and remain in fullscreen.`;
+  document.getElementById('mockViolationNotice').classList.remove('hidden');
+  if (state.proctorViolationCount >= PROCTOR_VIOLATION_LIMIT) {
+    state.proctorLockUntil = Date.now() + PROCTOR_LOCK_DURATION;
+    state.activeMockAssessment = null;
+    if (mockTimerInterval) clearInterval(mockTimerInterval);
+    mockTimerInterval = null;
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    showToast('Three proctor warnings. This local learner profile is locked for 24 hours.');
+    renderProctorLockScreen();
+  } else showToast(`Proctor warning ${attempt.violations}/${PROCTOR_VIOLATION_LIMIT}: ${reason}.`);
+  persistState();
+}
+
+let proctorLockInterval = null;
+function renderProctorLockScreen() {
+  const overlay = document.getElementById('proctorLockOverlay');
+  if (!overlay) return;
+  if (state.proctorLockUntil <= Date.now()) {
+    state.proctorLockUntil = 0;
+    state.proctorViolationCount = 0;
+    overlay.classList.add('hidden');
+    if (proctorLockInterval) clearInterval(proctorLockInterval);
+    proctorLockInterval = null;
+    persistState();
+    return;
+  }
+  overlay.classList.remove('hidden');
+  const tick = () => {
+    const remaining = Math.max(0, state.proctorLockUntil - Date.now());
+    const seconds = Math.ceil(remaining / 1000);
+    const timer = document.getElementById('proctorLockCountdown');
+    if (timer) timer.textContent = `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    if (!remaining) renderProctorLockScreen();
+  };
+  tick();
+  if (!proctorLockInterval) proctorLockInterval = setInterval(tick, 1000);
+}
+
+function downloadMockCertificate(topicId, format = 'png') {
+  const topic = MOCK_TOPICS.find(item => item.id === topicId);
+  const progress = getMockTopicProgress(topicId);
+  if (!topic || progress.passed !== progress.total) {
+    showToast('Pass all five mocks in this topic at 70% or higher to unlock its certificate.');
+    return;
+  }
+  const average = Math.round(progress.records.reduce((sum, result) => sum + result.bestPercent, 0) / progress.total);
+  const canvas = document.createElement('canvas');
+  canvas.width = 1400;
+  canvas.height = 990;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFDF9'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#D4AF37'; ctx.lineWidth = 10; ctx.strokeRect(32, 32, canvas.width - 64, canvas.height - 64);
+  ctx.strokeStyle = '#FF5500'; ctx.lineWidth = 3; ctx.strokeRect(52, 52, canvas.width - 104, canvas.height - 104);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#FF5500'; ctx.font = '700 34px sans-serif'; ctx.fillText('JIET • MENTORSHIP WITH KAPIL', 700, 170);
+  ctx.fillStyle = '#C28B38'; ctx.font = '700 22px sans-serif'; ctx.fillText('CERTIFICATE OF MOCK ASSESSMENT MASTERY', 700, 260);
+  ctx.fillStyle = '#0F172A'; ctx.font = '700 54px Georgia, serif'; ctx.fillText(topic.title, 700, 365);
+  ctx.fillStyle = '#64748B'; ctx.font = '24px sans-serif'; ctx.fillText('This certificate is proudly awarded to', 700, 460);
+  ctx.fillStyle = '#FF5500'; ctx.font = '700 52px Georgia, serif'; ctx.fillText(getCertificateRecipientName().toUpperCase(), 700, 545);
+  ctx.fillStyle = '#334155'; ctx.font = '24px sans-serif'; ctx.fillText(`Passed all five timed mock assessments · Average best score ${average}%`, 700, 645);
+  ctx.fillText(`Certificate ID: ${progress.records[4].certificateId}`, 700, 710);
+  ctx.fillText(`Issued ${new Date().toLocaleDateString('en-GB')}`, 700, 765);
+  ctx.font = '700 22px sans-serif'; ctx.fillText('Placement Readiness Mentorship With Kapil', 700, 850);
+  downloadCanvasArtifact(canvas, `JIET_${safeFilename(topicId)}_Mock_Certificate_${safeFilename(state.learnerName)}`, format);
 }
 
 function downloadTrackCertificate(trackId, format = 'png') {
@@ -2156,6 +2502,11 @@ function revealActiveNavItem(containerSelector, tabId) {
 }
 
 function switchTab(tabId) {
+  if (state.proctorLockUntil > Date.now()) { renderProctorLockScreen(); return; }
+  if (state.activeMockAssessment && tabId !== 'tab-mock-center') {
+    recordProctorViolation('leaving the Mock Center');
+    return;
+  }
   if (!document.getElementById(tabId)?.classList.contains('tab-pane')) return;
   state.activeTab = tabId;
 
@@ -2423,6 +2774,10 @@ function downloadBadgeArtifact(badgeId, format = 'png') {
 }
 
 function openBadgesModal() {
+  if (state.activeMockAssessment || state.proctorLockUntil > Date.now()) {
+    showToast('Badges are unavailable during a proctored mock or profile lock.');
+    return;
+  }
   const modal = document.getElementById('badgesModal');
   const grid = document.getElementById('badgesModalGrid');
   if (!modal || !grid) return;
@@ -2457,6 +2812,10 @@ function closeBadgesModal() {
 // PROFILE, LOGOFF & RESET ENGINE
 // ==========================================
 function openProfileModal() {
+  if (state.activeMockAssessment || state.proctorLockUntil > Date.now()) {
+    showToast('Profile actions are disabled during a proctored mock or account lock.');
+    return;
+  }
   const modal = document.getElementById('profileModal');
   if (!modal) return;
   document.getElementById('profileModalName').textContent = state.learnerName;
@@ -2498,6 +2857,10 @@ function saveNewNameFromProfile() {
 }
 
 function handleLogoff() {
+  if (state.activeMockAssessment || state.proctorLockUntil > Date.now()) {
+    showToast('You cannot log off during a proctored mock or 24-hour profile lock.');
+    return;
+  }
   if (confirm('Are you sure you want to log off? You can switch to another learner.')) {
     persistState();
     closeProfileModal();
@@ -2601,6 +2964,8 @@ function triggerConfetti(durationSeconds = 1.5) {
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   loadSavedState();
+  renderMockCenter();
+  renderProctorLockScreen();
 
   // If learner has previously set a name, hide onboarding modal
   if (state.learnerName && state.learnerName !== 'Learner') {
@@ -2737,4 +3102,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   updateHUD();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && state.activeMockAssessment) recordProctorViolation('switching away from the exam tab');
+  });
+  document.addEventListener('click', event => {
+    if (state.proctorLockUntil > Date.now() && !event.target.closest('#proctorLockOverlay')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+  document.addEventListener('keydown', event => {
+    if (state.proctorLockUntil > Date.now()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+  document.addEventListener('fullscreenchange', () => {
+    if (state.activeMockAssessment && !document.fullscreenElement && document.fullscreenEnabled) recordProctorViolation('exiting fullscreen');
+  });
+  window.addEventListener('beforeunload', () => {
+    if (state.activeMockAssessment) recordProctorViolation('reloading or closing the exam');
+  });
+  window.addEventListener('storage', event => {
+    if (event.key !== PROFILES_STORAGE_KEY || !activeProfileId || !event.newValue) return;
+    try {
+      const updatedProfiles = JSON.parse(event.newValue);
+      const remoteLockUntil = Number(updatedProfiles?.[activeProfileId]?.proctorLockUntil) || 0;
+      if (remoteLockUntil > state.proctorLockUntil) {
+        state.proctorLockUntil = Math.min(Date.now() + PROCTOR_LOCK_DURATION, remoteLockUntil);
+        state.activeMockAssessment = null;
+        renderProctorLockScreen();
+      }
+    } catch (error) { console.warn('Unable to sync local profile lock', error); }
+  });
 });
