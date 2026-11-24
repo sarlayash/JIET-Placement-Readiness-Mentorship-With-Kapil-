@@ -16,6 +16,7 @@
 ### 📱 Install as Mobile App (PWA)
 - **Android / Chrome / Edge:** Open the web app and tap the **"📲 Install App"** button in the header or your browser menu.
 - **iOS / Safari:** Tap the **Share** button `⎋`, then select **"Add to Home Screen"** `➕`.
+- After the app shell loads once online, the lessons, styles, scripts, and local images are cached for offline use. Google Fonts still require an internet connection; system fonts are used when they are unavailable.
 
 ---
 
@@ -38,6 +39,9 @@
    - Chemistry Discourse Cloze Test (Questions 21 to 25).
 6. **Level 6: 🏆 Certificate of Placement Readiness**
    - Dynamic recipient naming, live verification ID, 1-click **Download as PNG** (high-res canvas) and print-ready PDF styling.
+
+### 🔗 Connected Topics
+- The Concept Mastery foundation now links signposts to proactive drills, roots to sentence practice, paragraph clues to Para-Jumbles, and context clues to the cloze passage.
 
 ---
 
