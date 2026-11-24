@@ -7,6 +7,7 @@ const path = require('node:path');
 function loadApp() {
   const root = process.cwd();
   const elements = new Map();
+  const speechState = { speaking: false, utterances: [], cancel() { this.speaking = false; }, speak(utterance) { this.speaking = true; this.utterances.push(utterance); } };
   const document = {
     addEventListener() {},
     createElement() { return { click() {}, set href(value) { this._href = value; }, set download(value) { this._download = value; } }; },
@@ -20,7 +21,8 @@ function loadApp() {
   const context = {
     console,
     document,
-    window: { crypto: { getRandomValues(bytes) { bytes.fill(7); return bytes; } } },
+    window: { crypto: { getRandomValues(bytes) { bytes.fill(7); return bytes; } }, speechSynthesis: speechState },
+    SpeechSynthesisUtterance: function (text) { this.text = text; },
     navigator: {},
     localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
     TextEncoder,
@@ -39,7 +41,7 @@ function loadApp() {
   const scripts = ['career-curriculum.js', 'english-curriculum.js', 'app.js']
     .map(file => fs.readFileSync(path.join(root, file), 'utf8'))
     .join('\n');
-  vm.runInContext(`${scripts}\nglobalThis.__testApi = { state, BADGES_CONFIG, LEVEL_BADGES, CAREER_ASSESSMENTS, FOUNDATION_ASSESSMENT, PROACTIVE_DRILLS, POS_DRILLS, SENTENCE_PAGE_1, SENTENCE_PAGE_2, PARAJUMBLES_PAGE_1, PARAJUMBLES_PAGE_2_3, CLOZE_QUESTIONS, APTITUDE_QUESTIONS, ENGLISH_TOPICS, MOCK_TOPICS, MOCK_DIFFICULTIES, getMockQuestions, getMockOptions, loadSavedState, getActiveProfileId: () => activeProfileId, getLearningLevelProgress, getNewLevelBadges, areAllLearningLevelsComplete, recordProctorViolation, resetProctorDebounce() { lastProctorViolationAt = 0; }, imageCanvasToPdfBlob, downloadCanvasArtifact, downloadTrackCertificate, downloadEnglishCertificate, downloadCertificatePNG }; globalThis.__testApi.__context = globalThis;`, context, { filename: 'app-test.vm.js' });
+  vm.runInContext(`${scripts}\nglobalThis.__testApi = { state, BADGES_CONFIG, LEVEL_BADGES, CAREER_ASSESSMENTS, FOUNDATION_ASSESSMENT, PROACTIVE_DRILLS, POS_DRILLS, SENTENCE_PAGE_1, SENTENCE_PAGE_2, PARAJUMBLES_PAGE_1, PARAJUMBLES_PAGE_2_3, CLOZE_QUESTIONS, APTITUDE_QUESTIONS, ENGLISH_TOPICS, MOCK_TOPICS, MOCK_DIFFICULTIES, getMockQuestions, getMockOptions, loadSavedState, getActiveProfileId: () => activeProfileId, getLearningLevelProgress, getNewLevelBadges, areAllLearningLevelsComplete, recordProctorViolation, readQuestionAloud, resetProctorDebounce() { lastProctorViolationAt = 0; }, imageCanvasToPdfBlob, downloadCanvasArtifact, downloadTrackCertificate, downloadEnglishCertificate, downloadCertificatePNG }; globalThis.__testApi.__context = globalThis; globalThis.__testApi.__speech = window.speechSynthesis;`, context, { filename: 'app-test.vm.js' });
   return context.__testApi;
 }
 
@@ -145,6 +147,34 @@ test('Firebase profile hydration runs after login without holding the sign-in ga
   assert.doesNotMatch(handler, /await window\.firebaseLoadLearner/);
   assert.match(handler, /if \(gate\) gate\.classList\.add\('hidden'\);[\s\S]*window\.firebaseLoadLearner\(user\.uid\)\.then/);
   assert.match(auth, /Could not enable persistent Google sign-in[\s\S]*continuing with Firebase defaults/);
+});
+
+test('every generated question format has optional text-to-speech and responsive mobile layouts', () => {
+  const app = fs.readFileSync(path.join(process.cwd(), 'app.js'), 'utf8');
+  const html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
+  const css = fs.readFileSync(path.join(process.cwd(), 'styles.css'), 'utf8');
+  assert.match(app, /function readQuestionAloud\(button\)/);
+  assert.match(app, /readButton\.className = 'question-read-btn'/);
+  assert.equal((app.match(/class="question-read-btn"/g) || []).length, 2, 'English and mock assessment renderers expose read aloud');
+  assert.match(html, /Read sequence/);
+  assert.match(css, /@media \(max-width: 899px\)/);
+  assert.match(css, /@media \(max-width: 640px\)/);
+  assert.match(css, /env\(safe-area-inset-bottom/);
+});
+
+test('read aloud speaks the active question and its options and can be stopped', () => {
+  const api = loadApp();
+  const spokenButton = { textContent: '🔊 Read aloud', attributes: {}, setAttribute(key, value) { this.attributes[key] = value; }, closest() { return card; } };
+  const prompt = { innerText: 'What should the learner do first?' };
+  const options = [{ innerText: 'A. Review the clues' }, { innerText: 'B. Guess immediately' }];
+  const card = { querySelector(selector) { return selector.includes('.q-text') ? prompt : null; }, querySelectorAll(selector) { return selector.includes('.option-btn') ? options : []; } };
+  api.readQuestionAloud(spokenButton);
+  assert.match(api.__speech.utterances[0].text, /What should the learner do first/);
+  assert.match(api.__speech.utterances[0].text, /Review the clues/);
+  assert.equal(spokenButton.attributes['aria-pressed'], 'true');
+  api.readQuestionAloud(spokenButton);
+  assert.equal(api.__speech.speaking, false);
+  assert.equal(spokenButton.attributes['aria-pressed'], 'false');
 });
 
 test('saved learner profiles are isolated by Firebase UID even when names match', () => {

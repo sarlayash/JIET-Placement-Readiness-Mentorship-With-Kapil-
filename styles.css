@@ -2504,6 +2504,23 @@ body {
   cursor: pointer;
 }
 .hero-admin-link:hover { background: rgba(255, 85, 0, 0.14); }
+.question-read-btn {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid #FED7AA;
+  border-radius: var(--radius-full);
+  color: #9A3412;
+  background: #FFF7ED;
+  font: 750 0.78rem var(--font-main);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.question-read-btn:hover, .question-read-btn[aria-pressed="true"] { border-color: var(--face-orange); background: #FFEDD5; }
+.question-read-btn:focus-visible { outline: 3px solid #FDBA74; outline-offset: 2px; }
+.english-question-card > .question-read-btn { margin: -4px 0 14px; }
 .admin-dashboard-toolbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
 .admin-dashboard-status-row { display: grid; grid-template-columns: 1fr minmax(220px, 340px); align-items: center; gap: 10px 18px; margin: 18px 0 12px; }
 .admin-dashboard-status-row p { margin: 0; color: #475569; font-size: 0.82rem; }
@@ -2516,6 +2533,91 @@ body {
 .admin-learner-table td small { display: block; margin-top: 3px; color: #64748B; font-size: 0.66rem; }
 .admin-learner-table .btn { min-height: 32px; padding: 6px 10px; font-size: 0.7rem; white-space: nowrap; }
 @media (max-width: 640px) { .admin-dashboard-status-row { grid-template-columns: 1fr; } .admin-dashboard-status-row label, .admin-dashboard-status-row input { grid-column: 1; grid-row: auto; } }
+
+/* Responsive layout safeguards for narrow phones, tablets, and split-screen windows. */
+@media (max-width: 899px) {
+  .level-nav-bar { display: none; }
+  .header-inner { flex-wrap: wrap; padding: 9px 14px; }
+  .brand-group { flex: 1 1 280px; min-width: 0; }
+  .learner-hud { flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
+  .mentor-hero-card { padding: 20px; }
+  .hero-right { display: none; }
+  .hero-headline { font-size: clamp(1.3rem, 3.4vw, 1.6rem); overflow-wrap: anywhere; }
+  .main-content { min-width: 0; }
+}
+
+@media (max-width: 640px) {
+  body { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .app-container, .main-content, .tab-pane { min-width: 0; width: 100%; }
+  .header-inner { gap: 8px; padding: 8px 12px; }
+  .brand-group { flex-basis: 100%; gap: 8px; }
+  .brand-logo { height: 32px; }
+  .brand-title { font-size: 0.84rem; }
+  .brand-badge { font-size: 0.64rem; }
+  .learner-hud { width: 100%; justify-content: space-between; gap: 6px; }
+  .hud-item { padding: 5px 9px; font-size: 0.75rem; }
+  .hud-label { display: none; }
+  .pwa-install-hud-btn { min-height: 40px; padding: 6px 10px; }
+  .hud-btn { flex: 0 0 38px; width: 38px; height: 38px; }
+  .badge-btn { flex-basis: auto; width: auto; }
+  .user-name-display { max-width: 78px; }
+  .mentor-hero-card { margin: 12px 12px 10px; padding: 16px; }
+  .hero-left { min-width: 0; align-items: flex-start; gap: 12px; }
+  .mentor-portrait { width: 62px; height: 62px; }
+  .hero-tag { font-size: 0.62rem; letter-spacing: 0.04em; }
+  .hero-headline { font-size: clamp(1.15rem, 5vw, 1.45rem); }
+  .hero-subtext { font-size: 0.82rem; }
+  .stat-pill { font-size: 0.68rem; }
+  .hero-admin-link { min-height: 44px; }
+  .main-content { padding: 14px 12px 28px; }
+  .section-header h2 { font-size: clamp(1.25rem, 5.2vw, 1.6rem); line-height: 1.25; overflow-wrap: anywhere; }
+  .topic-connections-grid, .english-topic-grid, .mock-topic-grid { grid-template-columns: minmax(0, 1fr); }
+  .career-topic-grid { grid-template-columns: minmax(0, 1fr); }
+  .topic-connections-card, .career-assessment-panel, .drill-section-block { padding: 14px; }
+  .topic-link-card { min-width: 0; gap: 8px; padding: 11px; }
+  .topic-link-copy { min-width: 0; }
+  .question-card { padding: 15px 14px; }
+  .q-action-strip { justify-content: flex-start; }
+  .q-action-strip .xp-badge { margin-left: auto; }
+  .options-grid.grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .career-assessment-heading { align-items: flex-start; }
+  .career-assessment-heading > div { min-width: 0; }
+  .career-assessment-heading .xp-badge { max-width: 100%; white-space: normal; }
+  .english-question-card { padding: 14px; }
+  .english-exam-topline { align-items: flex-start; }
+  .english-exam-topline h3 { font-size: 1rem; overflow-wrap: anywhere; }
+  .english-timer { min-width: 76px; padding: 9px 10px; font-size: 1.15rem; }
+  .english-exam-progress-row { flex-wrap: wrap; }
+  .english-exam-controls .btn { flex: 1 1 42%; min-height: 44px; }
+  .english-exam-submit-row .btn { width: 100%; min-height: 46px; }
+  .certificate-download-actions .btn { width: 100%; min-width: 0; }
+  .certificate-level-checklist { grid-template-columns: minmax(0, 1fr); }
+  .learner-cert-name-input-row, .learner-cert-name-input-row input { width: 100%; min-width: 0; }
+  .timeline-item { align-items: flex-start; padding: 11px 10px; }
+  .timeline-left { min-width: 0; }
+  .timeline-text { overflow-wrap: anywhere; }
+  .timeline-controls { flex-wrap: wrap; }
+  .timeline-controls .btn { flex: 1 1 100%; min-height: 44px; }
+  .mobile-bottom-nav { height: calc(64px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .mobile-nav-btn { flex-basis: clamp(68px, 19vw, 78px); }
+  .modal-overlay { padding: 10px; }
+  .modal-card { width: 100%; max-width: 100%; max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); overflow-y: auto; }
+  .certificate-viewport { justify-content: flex-start; }
+}
+
+@media (max-width: 360px) {
+  .brand-title { font-size: 0.78rem; }
+  .brand-badge { font-size: 0.58rem; }
+  .learner-hud { justify-content: flex-start; }
+  .user-pill { margin-left: auto; }
+  .badge-count-pill { font-size: 0.64rem; }
+  .hero-left { gap: 9px; }
+  .mentor-portrait { width: 52px; height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
 
 /* ==========================================================================
    CONFETTI & FLOATING TOAST

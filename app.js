@@ -35,6 +35,7 @@ const ACTIVE_PROFILE_STORAGE_KEY = 'faceprep_kapil_active_profile';
 let learnerProfiles = {};
 let activeProfileId = null;
 let lastLevelCompletionKey = null;
+let activeSpeechButton = null;
 let authUser = null;
 let appInitialized = false;
 let pendingFirebaseUser = null;
@@ -1653,13 +1654,14 @@ function activateEnglishAssessmentUI(topicId, startClock = true) {
 }
 
 function renderEnglishQuestion() {
+  stopQuestionSpeech();
   const attempt = state.activeEnglishAssessment;
   if (!attempt) return;
   const questions = ENGLISH_ASSESSMENTS[attempt.topicId];
   const question = questions[attempt.index];
   if (!question) return;
   const mount = document.getElementById('englishQuestionMount');
-  mount.innerHTML = `<article class="english-question-card"><div class="question-top-meta"><span>${question.qNum}</span><span class="xp-badge">Placement English</span></div><h4>${escapeEnglishHTML(question.prompt)}</h4><div class="english-option-list">${question.options.map(option => `<button type="button" class="english-option-btn ${attempt.answers[question.id] === option.key ? 'selected' : ''}" data-choice="${option.key}" aria-pressed="${attempt.answers[question.id] === option.key}"><span class="english-option-key">${option.key.toUpperCase()}</span><span>${escapeEnglishHTML(option.text)}</span></button>`).join('')}</div><div class="english-hint-box ${attempt.hintOpen ? 'visible' : ''}" id="englishHintBox">💡 ${escapeEnglishHTML(question.hint)}</div></article>`;
+  mount.innerHTML = `<article class="english-question-card"><div class="question-top-meta"><span>${question.qNum}</span><span class="xp-badge">Placement English</span></div><h4>${escapeEnglishHTML(question.prompt)}</h4><button type="button" class="question-read-btn" aria-label="Read this question and its choices aloud" aria-pressed="false" onclick="readQuestionAloud(this)">🔊 Read aloud</button><div class="english-option-list">${question.options.map(option => `<button type="button" class="english-option-btn ${attempt.answers[question.id] === option.key ? 'selected' : ''}" data-choice="${option.key}" aria-pressed="${attempt.answers[question.id] === option.key}"><span class="english-option-key">${option.key.toUpperCase()}</span><span>${escapeEnglishHTML(option.text)}</span></button>`).join('')}</div><div class="english-hint-box ${attempt.hintOpen ? 'visible' : ''}" id="englishHintBox">💡 ${escapeEnglishHTML(question.hint)}</div></article>`;
   mount.querySelectorAll('.english-option-btn').forEach(button => button.addEventListener('click', () => {
     attempt.answers[question.id] = button.dataset.choice;
     attempt.hintOpen = false;
@@ -1722,6 +1724,7 @@ function submitEnglishAssessment() {
 function finishEnglishAssessment(timesUp) {
   const attempt = state.activeEnglishAssessment;
   if (!attempt) return;
+  stopQuestionSpeech();
   if (englishTimerInterval) clearInterval(englishTimerInterval);
   englishTimerInterval = null;
   const questions = ENGLISH_ASSESSMENTS[attempt.topicId];
@@ -1938,6 +1941,7 @@ function startMockAssessment(topicId, mockIndex) {
 }
 
 function renderMockExam() {
+  stopQuestionSpeech();
   const attempt = state.activeMockAssessment;
   if (!attempt) return;
   const topic = MOCK_TOPICS.find(item => item.id === attempt.topicId);
@@ -1952,7 +1956,7 @@ function renderMockExam() {
   document.getElementById('mockQuestionProgress').style.width = `${Math.round((Object.keys(attempt.answers).length / questions.length) * 100)}%`;
   const mount = document.getElementById('mockQuestionMount');
   const displayOptions = getMockOptions(question, attempt.mockIndex);
-  mount.innerHTML = `<article class="english-question-card"><div class="question-top-meta"><span>${escapeEnglishHTML(question.qNum || `Question ${attempt.index + 1}`)}</span><span class="badge-chip">${escapeEnglishHTML(MOCK_DIFFICULTIES[attempt.mockIndex].label)} · No hints</span></div><h4>${escapeEnglishHTML(question.prompt)}</h4><div class="english-option-list">${displayOptions.map(option => `<button type="button" class="english-option-btn ${attempt.answers[question.id] === option.key ? 'selected' : ''}" data-choice="${escapeEnglishHTML(option.key)}" aria-pressed="${attempt.answers[question.id] === option.key}"><span class="english-option-key">${escapeEnglishHTML(option.key.toUpperCase())}</span><span>${escapeEnglishHTML(option.text)}</span></button>`).join('')}</div></article>`;
+  mount.innerHTML = `<article class="english-question-card"><div class="question-top-meta"><span>${escapeEnglishHTML(question.qNum || `Question ${attempt.index + 1}`)}</span><span class="badge-chip">${escapeEnglishHTML(MOCK_DIFFICULTIES[attempt.mockIndex].label)} · No hints</span></div><h4>${escapeEnglishHTML(question.prompt)}</h4><button type="button" class="question-read-btn" aria-label="Read this question and its choices aloud" aria-pressed="false" onclick="readQuestionAloud(this)">🔊 Read aloud</button><div class="english-option-list">${displayOptions.map(option => `<button type="button" class="english-option-btn ${attempt.answers[question.id] === option.key ? 'selected' : ''}" data-choice="${escapeEnglishHTML(option.key)}" aria-pressed="${attempt.answers[question.id] === option.key}"><span class="english-option-key">${escapeEnglishHTML(option.key.toUpperCase())}</span><span>${escapeEnglishHTML(option.text)}</span></button>`).join('')}</div></article>`;
   mount.querySelectorAll('.english-option-btn').forEach(button => button.addEventListener('click', () => {
     attempt.answers[question.id] = button.dataset.choice;
     persistState();
@@ -1995,6 +1999,7 @@ function submitMockAssessment() {
 function finishMockAssessment(timesUp) {
   const attempt = state.activeMockAssessment;
   if (!attempt) return;
+  stopQuestionSpeech();
   if (mockTimerInterval) clearInterval(mockTimerInterval);
   mockTimerInterval = null;
   const topic = MOCK_TOPICS.find(item => item.id === attempt.topicId);
@@ -2317,6 +2322,48 @@ function showToast(message) {
   }, 2200);
 }
 
+function stopQuestionSpeech() {
+  const previousButton = activeSpeechButton;
+  activeSpeechButton = null;
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (previousButton) {
+    previousButton.textContent = '🔊 Read aloud';
+    previousButton.setAttribute('aria-pressed', 'false');
+  }
+}
+
+function readQuestionAloud(button) {
+  if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance !== 'function') {
+    showToast('Read aloud is not available in this browser. Try Chrome, Edge, or Safari.');
+    return;
+  }
+  if (activeSpeechButton === button && window.speechSynthesis.speaking) {
+    stopQuestionSpeech();
+    return;
+  }
+  stopQuestionSpeech();
+  const card = button.closest('.question-card, .english-question-card, .timeline-sorter-wrap');
+  if (!card) return;
+  const plainText = element => String(element?.innerText || element?.textContent || '').replace(/\s+/g, ' ').trim();
+  const prompt = plainText(card.querySelector('.q-text, h4'));
+  const directions = plainText(card.querySelector('.block-instruction'));
+  const fragments = [...card.querySelectorAll('.fragment-row, .timeline-item')].map(plainText);
+  const choices = [...card.querySelectorAll('.option-btn, .english-option-btn')].map(plainText);
+  const content = [directions, prompt, fragments.length ? `Question text: ${fragments.join('. ')}` : '', choices.length ? `Answer choices: ${choices.join('. ')}` : '']
+    .filter(Boolean).join('. ');
+  if (!content) return;
+  const utterance = new SpeechSynthesisUtterance(content);
+  utterance.lang = 'en-IN';
+  utterance.rate = 0.94;
+  activeSpeechButton = button;
+  button.textContent = '⏹ Stop reading';
+  button.setAttribute('aria-pressed', 'true');
+  utterance.onend = utterance.onerror = () => {
+    if (activeSpeechButton === button) stopQuestionSpeech();
+  };
+  window.speechSynthesis.speak(utterance);
+}
+
 // ==========================================
 // 4. RENDERING QUESTION BLOCKS
 // ==========================================
@@ -2413,6 +2460,14 @@ function renderMultipleChoiceList(containerId, questionList, xpPerQuestion = 50)
       </button>
       <span class="xp-badge">+${xpPerQuestion} XP</span>
     `;
+    const readButton = document.createElement('button');
+    readButton.type = 'button';
+    readButton.className = 'question-read-btn';
+    readButton.textContent = '🔊 Read aloud';
+    readButton.setAttribute('aria-label', 'Read this question and its choices aloud');
+    readButton.setAttribute('aria-pressed', 'false');
+    readButton.addEventListener('click', () => readQuestionAloud(readButton));
+    actionStrip.insertBefore(readButton, actionStrip.firstChild);
     card.appendChild(actionStrip);
 
     // Hint Box
@@ -2660,6 +2715,7 @@ function switchTab(tabId) {
     return;
   }
   if (!document.getElementById(tabId)?.classList.contains('tab-pane')) return;
+  stopQuestionSpeech();
   state.activeTab = tabId;
 
   // Panes

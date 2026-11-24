@@ -18,6 +18,7 @@
 - **iOS / Safari:** Tap the **Share** button `⎋`, then select **"Add to Home Screen"** `➕`.
 - After the app shell and Firebase SDK load online, the curriculum, styles, scripts, local images, and Firestore cache support offline practice. Google OAuth sign-in requires an internet connection. Google Fonts also require internet; system fonts are used when unavailable.
 - Sign in with Google to open a learner profile. Progress syncs to Firestore when connected and stays cached locally for offline use.
+- Select **🔊 Read aloud** on any practice or assessment question to hear its prompt and answer choices. Speech uses the browser/device voice engine; an active read can be stopped from the same button.
 
 ### Enable Google Authentication
 
