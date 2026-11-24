@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>JIET Placement Readiness Mentorship With Kapil | Powered by FACE Prep</title>
-  <meta name="description" content="Build placement readiness with JIET: verbal, quantitative and logical aptitude, workplace communication, soft skills, assessments, badges, and certificates.">
+  <meta name="description" content="Build placement readiness with JIET: verbal aptitude, professional English, grammar, communication, soft skills, assessments, badges, and certificates.">
   <meta name="theme-color" content="#FF5500">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -62,7 +62,7 @@
 
           <button id="badgesModalBtn" class="hud-btn badge-btn" title="View Earned Badges" aria-label="View Badges">
             <span>🏅</span>
-            <span class="badge-count-pill" id="badgeCount">0/14</span>
+            <span class="badge-count-pill" id="badgeCount">0/22</span>
           </button>
 
           <button id="profileSettingsBtn" class="hud-btn" title="Profile, Log Off & Reset Progress" aria-label="Profile Settings">
@@ -94,8 +94,8 @@
           <h1 class="hero-headline">JIET Placement Readiness Mentorship <span class="highlight-orange">With Kapil</span></h1>
           <p class="hero-subtext">Crush corporate verbal aptitude tests (TCS, Infosys, Cognizant, Wipro, Accenture) with proactive sentence completion & para-jumble master strategies powered by FACE Prep.</p>
           <div class="hero-stats-row">
-            <span class="stat-pill"><strong>100+</strong> Assessment Questions</span>
-            <span class="stat-pill"><strong>14</strong> Skill Badges</span>
+            <span class="stat-pill"><strong>500+</strong> Assessment Questions</span>
+            <span class="stat-pill"><strong>22</strong> Skill Badges</span>
             <span class="stat-pill"><strong>100%</strong> Complete Coverage of Worksheet</span>
             <span class="stat-pill highlight-pill">📜 Official Certificate</span>
           </div>
@@ -140,9 +140,13 @@
         <span class="tab-icon">🧠</span>
         <span class="tab-text">8. Aptitude</span>
       </button>
+      <button class="nav-tab" data-tab="tab-english">
+        <span class="tab-icon">🔤</span>
+        <span class="tab-text">9. English Mastery</span>
+      </button>
       <button class="nav-tab certificate-tab-btn" data-tab="tab-certificate">
         <span class="tab-icon">🏆</span>
-        <span class="tab-text">9. Certificates</span>
+        <span class="tab-text">10. Certificates</span>
       </button>
     </nav>
 
@@ -493,6 +497,9 @@
             <button class="topic-link-card" type="button" onclick="switchTab('tab-aptitude')">
               <span class="topic-link-icon">🧠</span><span class="topic-link-copy"><strong>Quant + Logic → Placement Aptitude</strong><small>Practice arithmetic, reasoning, data interpretation, and spatial skills.</small></span><span class="topic-link-arrow">→</span>
             </button>
+            <button class="topic-link-card" type="button" onclick="switchTab('tab-english')">
+              <span class="topic-link-icon">🔤</span><span class="topic-link-copy"><strong>Grammar + Usage → English Mastery</strong><small>Practice punctuation, parts of speech, collocations, and workplace English with timed tests.</small></span><span class="topic-link-arrow">→</span>
+            </button>
           </div>
         </section>
 
@@ -806,12 +813,39 @@
         <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-certificate')"><span>View Your Career Readiness Certificates</span><span class="btn-arrow">🏆</span></button></div>
       </section>
 
-      <!-- ================= LEVEL 9: CERTIFICATES ================= -->
+      <!-- ================= LEVEL 9: ENGLISH MASTERY ================= -->
+      <section id="tab-english" class="tab-pane">
+        <div class="section-header">
+          <div class="badge-chip">Level 9 • Professional English</div>
+          <h2>English Mastery for Placement Readiness</h2>
+          <p class="section-desc">Build confidence with eight focused topics. Each assessment has 50 multiple-choice questions, hints, solved workplace examples, and a 50-minute timer. Your active attempt saves locally and resumes offline.</p>
+        </div>
+        <div class="mentor-live-notes">
+          <div><span class="badge-chip">🗒️ Live Notes With Mentor Kapil</span><h3>Practical English for real placement rounds</h3><p>Pick a topic to review a quick mentor tip and a solved placement-oriented example before you begin.</p></div>
+        </div>
+        <div id="englishTopicGrid" class="english-topic-grid"></div>
+        <section id="englishAssessmentPanel" class="career-assessment-panel english-assessment-panel hidden" aria-live="polite">
+          <div class="english-exam-topline"><div><span class="badge-chip" id="englishExamTopicChip">50 Questions</span><h3 id="englishExamTitle">English Assessment</h3></div><div class="english-timer" id="englishTimer" role="timer" aria-live="off">50:00</div></div>
+          <div class="english-exam-progress-row"><span id="englishQuestionPosition">Question 1 of 50</span><span id="englishAnsweredCount">0 answered</span></div>
+          <div class="english-exam-progress-track"><div id="englishExamProgressFill"></div></div>
+          <div id="englishQuestionMount"></div>
+          <div class="english-exam-controls">
+            <button type="button" class="btn btn-secondary" id="englishPreviousBtn" onclick="moveEnglishQuestion(-1)">← Previous</button>
+            <button type="button" class="btn btn-secondary" id="englishHintBtn" onclick="toggleEnglishHint()">💡 Show hint</button>
+            <button type="button" class="btn btn-primary" id="englishNextBtn" onclick="moveEnglishQuestion(1)">Next →</button>
+          </div>
+          <div class="english-exam-submit-row"><button type="button" class="btn btn-primary" id="englishSubmitBtn" onclick="submitEnglishAssessment()">Submit 50-question assessment</button></div>
+          <div id="englishAssessmentResult" class="english-result-panel hidden" aria-live="polite"></div>
+        </section>
+        <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-certificate')"><span>View Your Certificates</span><span class="btn-arrow">🏆</span></button></div>
+      </section>
+
+      <!-- ================= LEVEL 10: CERTIFICATES ================= -->
       <section id="tab-certificate" class="tab-pane">
         <div class="section-header text-center">
-          <div class="badge-chip gold-chip">Level 9 • Official Recognition</div>
+          <div class="badge-chip gold-chip">Level 10 • Official Recognition</div>
           <h2>Career Readiness Certificate</h2>
-          <p class="section-desc">Your overall certificate records earned XP and badges. Complete the Soft Skills, Communication, and Aptitude assessments to unlock separate track certificates.</p>
+          <p class="section-desc">Your overall certificate records earned XP and badges. Complete the Soft Skills, Communication, Aptitude, or any English Mastery assessment to unlock additional track certificates.</p>
         </div>
 
         <div class="certificate-meta-actions">
@@ -876,7 +910,7 @@
                 </div>
                 <div class="cert-stat">
                   <span class="cert-stat-label">Mastery Badges</span>
-                  <strong class="cert-stat-val" id="certBadgesEarned">0 of 14 Unlocked</strong>
+                  <strong class="cert-stat-val" id="certBadgesEarned">0 of 22 Unlocked</strong>
                 </div>
                 <div class="cert-stat">
                   <span class="cert-stat-label">Curriculum Code</span>
@@ -949,6 +983,10 @@
         <span class="m-icon">🧠</span>
         <span class="m-label">Aptitude</span>
       </button>
+      <button class="mobile-nav-btn" data-tab="tab-english">
+        <span class="m-icon">🔤</span>
+        <span class="m-label">English</span>
+      </button>
       <button class="mobile-nav-btn" data-tab="tab-certificate">
         <span class="m-icon">🏆</span>
         <span class="m-label">Certificates</span>
@@ -1013,7 +1051,7 @@
               <div class="profile-stats-row">
                 <span class="profile-stat-badge" id="profileStatXP">⚡ 0 XP</span>
                 <span class="profile-stat-badge" id="profileStatLevel">⭐ Level 1</span>
-                <span class="profile-stat-badge" id="profileStatBadges">🏅 0/14 Badges</span>
+                <span class="profile-stat-badge" id="profileStatBadges">🏅 0/22 Badges</span>
               </div>
             </div>
           </div>
@@ -1054,6 +1092,7 @@
 
   <!-- Scripts -->
   <script src="career-curriculum.js"></script>
+  <script src="english-curriculum.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

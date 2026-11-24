@@ -16,6 +16,8 @@ const state = {
   certificateId: '',
   unlockedBadges: new Set(),
   answeredQuestions: {}, // { qId: { correct: bool, choice: string } }
+  englishAssessments: {},
+  activeEnglishAssessment: null,
   activeTab: 'tab-concepts',
   rahulOrder: [5, 1, 8, 3, 7, 2, 9, 4, 6] // start scrambled so the timeline cannot be claimed untouched
 };
@@ -41,7 +43,8 @@ const BADGES_CONFIG = [
   { id: 'quant_master', icon: '➗', title: 'Quant Master', desc: 'Scored 75% or higher on the Quantitative Aptitude assessment.' },
   { id: 'reasoning_ace', icon: '🧠', title: 'Reasoning Ace', desc: 'Scored 75% or higher on the Logical Reasoning assessment.' },
   { id: 'data_analyst', icon: '📊', title: 'Data Analyst', desc: 'Scored 75% or higher on the Data Interpretation assessment.' },
-  { id: 'spatial_solver', icon: '🔷', title: 'Spatial Solver', desc: 'Scored 75% or higher on the Spatial Reasoning assessment.' }
+  { id: 'spatial_solver', icon: '🔷', title: 'Spatial Solver', desc: 'Scored 75% or higher on the Spatial Reasoning assessment.' },
+  ...ENGLISH_TOPICS.map(topic => ({ id: `english_${topic.id}`, icon: topic.icon, title: `${topic.title} Ace`, desc: `Scored 80% or higher on the ${topic.title} assessment.` }))
 ];
 
 const BADGE_TOTAL = BADGES_CONFIG.length;
@@ -980,6 +983,8 @@ function createFreshLearnerState(name = 'Learner') {
   state.certificateId = generateCertificateId();
   state.unlockedBadges = new Set();
   state.answeredQuestions = {};
+  state.englishAssessments = {};
+  state.activeEnglishAssessment = null;
   state.rahulOrder = [5, 1, 8, 3, 7, 2, 9, 4, 6];
 }
 
@@ -997,6 +1002,10 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     ...CAREER_ASSESSMENTS.softSkills, ...CAREER_ASSESSMENTS.communication,
     ...APTITUDE_QUESTIONS
   ];
+  const allowedEnglishAnswers = Object.fromEntries(Object.entries(ENGLISH_ASSESSMENTS).map(([topicId, questions]) => [
+    topicId,
+    Object.fromEntries(questions.map(question => [question.id, new Set(question.options.map(option => option.key))]))
+  ]));
   const knownQuestionIds = new Set([...knownQuestions.map(question => question.id), 'rahul_timeline']);
   const answers = safeData.answeredQuestions && typeof safeData.answeredQuestions === 'object' && !Array.isArray(safeData.answeredQuestions)
     ? Object.fromEntries(Object.entries(safeData.answeredQuestions).filter(([id, answer]) =>
@@ -1016,8 +1025,34 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     : fallbackName;
   const validTabs = new Set([
     'tab-concepts', 'tab-drills', 'tab-sentences', 'tab-parajumbles', 'tab-cloze',
-    'tab-soft-skills', 'tab-communication', 'tab-aptitude', 'tab-certificate'
+    'tab-soft-skills', 'tab-communication', 'tab-aptitude', 'tab-english', 'tab-certificate'
   ]);
+  const savedEnglish = safeData.englishAssessments && typeof safeData.englishAssessments === 'object' && !Array.isArray(safeData.englishAssessments)
+    ? Object.fromEntries(Object.entries(safeData.englishAssessments).filter(([topicId, result]) =>
+      allowedEnglishAnswers[topicId] && result && Number.isFinite(Number(result.bestCorrect)) && Number(result.bestCorrect) >= 0 && Number(result.bestCorrect) <= 50
+    ).map(([topicId, result]) => [topicId, {
+      bestCorrect: Math.floor(Number(result.bestCorrect)),
+      bestPercent: Math.round(Number(result.bestCorrect) / 50 * 100),
+      attempts: Math.max(1, Math.floor(Number(result.attempts) || 1)),
+      completedAt: typeof result.completedAt === 'string' ? result.completedAt : '',
+      bestCompletedAt: typeof result.bestCompletedAt === 'string' ? result.bestCompletedAt : (typeof result.completedAt === 'string' ? result.completedAt : ''),
+      certificateId: typeof result.certificateId === 'string' && /^JIET-\d{4}-[A-F0-9]{16}$/.test(result.certificateId)
+        ? result.certificateId
+        : generateCertificateId()
+    }]))
+    : {};
+  const activeAttempt = safeData.activeEnglishAssessment;
+  const validActiveAttempt = activeAttempt && allowedEnglishAnswers[activeAttempt.topicId] && Number.isFinite(Number(activeAttempt.startedAt))
+    ? {
+      topicId: activeAttempt.topicId,
+      startedAt: Math.min(Date.now(), Number(activeAttempt.startedAt)),
+      index: Math.max(0, Math.min(49, Math.floor(Number(activeAttempt.index) || 0))),
+      answers: Object.fromEntries(Object.entries(activeAttempt.answers || {}).filter(([questionId, key]) =>
+        allowedEnglishAnswers[activeAttempt.topicId][questionId]?.has(key)
+      )),
+      hintOpen: Boolean(activeAttempt.hintOpen)
+    }
+    : null;
 
   return {
     learnerName: name,
@@ -1030,6 +1065,8 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     soundEnabled: typeof safeData.soundEnabled === 'boolean' ? safeData.soundEnabled : true,
     unlockedBadges: badges,
     answeredQuestions: answers,
+    englishAssessments: savedEnglish,
+    activeEnglishAssessment: validActiveAttempt,
     rahulOrder: safeOrder,
     activeTab: validTabs.has(safeData.activeTab) ? safeData.activeTab : 'tab-concepts'
   };
@@ -1045,6 +1082,8 @@ function applyLearnerState(data, fallbackName) {
   state.soundEnabled = safeData.soundEnabled;
   state.unlockedBadges = new Set(safeData.unlockedBadges);
   state.answeredQuestions = safeData.answeredQuestions;
+  state.englishAssessments = safeData.englishAssessments;
+  state.activeEnglishAssessment = safeData.activeEnglishAssessment;
   state.rahulOrder = safeData.rahulOrder;
   state.activeTab = safeData.activeTab;
 }
@@ -1114,6 +1153,8 @@ function persistState() {
       certificateId: state.certificateId,
       unlockedBadges: Array.from(state.unlockedBadges),
       answeredQuestions: state.answeredQuestions,
+      englishAssessments: state.englishAssessments,
+      activeEnglishAssessment: state.activeEnglishAssessment,
       rahulOrder: state.rahulOrder,
       activeTab: state.activeTab
     };
@@ -1158,6 +1199,206 @@ function updateCareerTrackUI() {
         : 'Answer every question and score at least 70% to unlock';
     }
   });
+}
+
+// ==========================================
+// ENGLISH MASTERY: TIMED, RESUMABLE 50-QUESTION TESTS
+// ==========================================
+let englishTimerInterval = null;
+
+function escapeEnglishHTML(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[character]);
+}
+
+function renderEnglishTopicCards() {
+  const grid = document.getElementById('englishTopicGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  ENGLISH_TOPICS.forEach(topic => {
+    const previous = state.englishAssessments[topic.id];
+    const active = state.activeEnglishAssessment?.topicId === topic.id;
+    const article = document.createElement('article');
+    article.className = 'english-topic-card';
+    article.innerHTML = `
+      <div class="english-topic-card-title"><span>${escapeEnglishHTML(topic.icon)}</span><div><h3>${escapeEnglishHTML(topic.title)}</h3><span class="badge-chip">50 MCQs · 50 min</span></div></div>
+      <p>${escapeEnglishHTML(topic.description)}</p>
+      <details class="mentor-note-details">
+        <summary>🗒️ Live Notes With Mentor Kapil</summary>
+        <div class="mentor-note-body"><p>${escapeEnglishHTML(topic.notes)}</p><strong>Solved placement example</strong><p>${escapeEnglishHTML(topic.solved)}</p></div>
+      </details>
+      <div class="english-topic-result">${previous ? `Best score: <strong>${previous.bestCorrect}/50 (${previous.bestPercent}%)</strong> · ${previous.attempts} attempt${previous.attempts === 1 ? '' : 's'}` : 'Assessment not attempted yet.'}</div>
+      <div class="english-topic-actions"><button type="button" class="btn btn-primary" onclick="startEnglishAssessment('${topic.id}')">${active ? '▶ Resume assessment' : previous ? '↻ Retake assessment' : '▶ Start assessment'}</button>${previous?.bestPercent >= 70 ? `<button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}')">📜 Certificate</button>` : ''}</div>
+    `;
+    grid.appendChild(article);
+  });
+}
+
+function startEnglishAssessment(topicId) {
+  if (!ENGLISH_ASSESSMENTS[topicId]) return;
+  if (state.activeEnglishAssessment && state.activeEnglishAssessment.topicId !== topicId) {
+    if (!confirm('A timed English assessment is in progress. Starting another topic will submit the current attempt with unanswered questions marked incorrect. Continue?')) return;
+    finishEnglishAssessment(true);
+  }
+  if (!state.activeEnglishAssessment) {
+    state.activeEnglishAssessment = { topicId, startedAt: Date.now(), answers: {}, index: 0, hintOpen: false };
+  }
+  switchTab('tab-english');
+  persistState();
+  activateEnglishAssessmentUI(topicId);
+}
+
+function activateEnglishAssessmentUI(topicId, startClock = true) {
+  const topic = ENGLISH_TOPICS.find(item => item.id === topicId);
+  const panel = document.getElementById('englishAssessmentPanel');
+  if (!topic || !panel) return;
+  panel.classList.remove('hidden');
+  document.getElementById('englishExamTopicChip').textContent = '50 Questions · 50 minutes';
+  document.getElementById('englishExamTitle').textContent = `${topic.title} Assessment`;
+  document.getElementById('englishAssessmentResult').classList.add('hidden');
+  document.getElementById('englishQuestionMount').classList.remove('hidden');
+  document.querySelector('.english-exam-progress-row').classList.remove('hidden');
+  document.querySelector('.english-exam-progress-track').classList.remove('hidden');
+  document.querySelector('.english-exam-controls').classList.remove('hidden');
+  document.querySelector('.english-exam-submit-row').classList.remove('hidden');
+  renderEnglishQuestion();
+  if (startClock) startEnglishTimer();
+}
+
+function renderEnglishQuestion() {
+  const attempt = state.activeEnglishAssessment;
+  if (!attempt) return;
+  const questions = ENGLISH_ASSESSMENTS[attempt.topicId];
+  const question = questions[attempt.index];
+  if (!question) return;
+  const mount = document.getElementById('englishQuestionMount');
+  mount.innerHTML = `<article class="english-question-card"><div class="question-top-meta"><span>${question.qNum}</span><span class="xp-badge">Placement English</span></div><h4>${escapeEnglishHTML(question.prompt)}</h4><div class="english-option-list">${question.options.map(option => `<button type="button" class="english-option-btn ${attempt.answers[question.id] === option.key ? 'selected' : ''}" data-choice="${option.key}" aria-pressed="${attempt.answers[question.id] === option.key}"><span class="english-option-key">${option.key.toUpperCase()}</span><span>${escapeEnglishHTML(option.text)}</span></button>`).join('')}</div><div class="english-hint-box ${attempt.hintOpen ? 'visible' : ''}" id="englishHintBox">💡 ${escapeEnglishHTML(question.hint)}</div></article>`;
+  mount.querySelectorAll('.english-option-btn').forEach(button => button.addEventListener('click', () => {
+    attempt.answers[question.id] = button.dataset.choice;
+    attempt.hintOpen = false;
+    persistState();
+    renderEnglishQuestion();
+  }));
+  document.getElementById('englishQuestionPosition').textContent = `Question ${attempt.index + 1} of 50`;
+  document.getElementById('englishAnsweredCount').textContent = `${Object.keys(attempt.answers).length} answered`;
+  document.getElementById('englishExamProgressFill').style.width = `${((attempt.index + 1) / questions.length) * 100}%`;
+  document.getElementById('englishPreviousBtn').disabled = attempt.index === 0;
+  document.getElementById('englishNextBtn').disabled = attempt.index === questions.length - 1;
+  document.getElementById('englishHintBtn').textContent = attempt.hintOpen ? '🙈 Hide hint' : '💡 Show hint';
+}
+
+function moveEnglishQuestion(step) {
+  const attempt = state.activeEnglishAssessment;
+  if (!attempt) return;
+  attempt.index = Math.max(0, Math.min(49, attempt.index + step));
+  attempt.hintOpen = false;
+  persistState();
+  renderEnglishQuestion();
+}
+
+function toggleEnglishHint() {
+  if (!state.activeEnglishAssessment) return;
+  state.activeEnglishAssessment.hintOpen = !state.activeEnglishAssessment.hintOpen;
+  persistState();
+  renderEnglishQuestion();
+}
+
+function startEnglishTimer() {
+  if (englishTimerInterval) clearInterval(englishTimerInterval);
+  const tick = () => {
+    const attempt = state.activeEnglishAssessment;
+    if (!attempt) {
+      clearInterval(englishTimerInterval);
+      englishTimerInterval = null;
+      return;
+    }
+    const remaining = Math.max(0, 50 * 60 * 1000 - (Date.now() - attempt.startedAt));
+    const seconds = Math.ceil(remaining / 1000);
+    const timer = document.getElementById('englishTimer');
+    if (timer) {
+      timer.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+      timer.classList.toggle('urgent', seconds <= 5 * 60);
+    }
+    if (remaining <= 0) finishEnglishAssessment(true);
+  };
+  tick();
+  if (state.activeEnglishAssessment) englishTimerInterval = setInterval(tick, 1000);
+}
+
+function submitEnglishAssessment() {
+  if (!state.activeEnglishAssessment) return;
+  const unanswered = 50 - Object.keys(state.activeEnglishAssessment.answers).length;
+  if (unanswered && !confirm(`You have ${unanswered} unanswered question${unanswered === 1 ? '' : 's'}. Submit now? Unanswered questions count as incorrect.`)) return;
+  finishEnglishAssessment(false);
+}
+
+function finishEnglishAssessment(timesUp) {
+  const attempt = state.activeEnglishAssessment;
+  if (!attempt) return;
+  if (englishTimerInterval) clearInterval(englishTimerInterval);
+  englishTimerInterval = null;
+  const questions = ENGLISH_ASSESSMENTS[attempt.topicId];
+  const correct = questions.filter(question => attempt.answers[question.id] === question.answer).length;
+  const old = state.englishAssessments[attempt.topicId];
+  const firstAttempt = !old;
+  const bestCorrect = Math.max(old?.bestCorrect || 0, correct);
+  const bestPercent = Math.round(bestCorrect / questions.length * 100);
+  const completedAt = new Date().toISOString();
+  state.englishAssessments[attempt.topicId] = {
+    bestCorrect,
+    bestPercent,
+    attempts: (old?.attempts || 0) + 1,
+    completedAt,
+    bestCompletedAt: correct >= (old?.bestCorrect || 0) ? completedAt : (old?.bestCompletedAt || old?.completedAt || completedAt),
+    certificateId: old?.certificateId || generateCertificateId()
+  };
+  state.activeEnglishAssessment = null;
+  if (bestPercent >= 80) unlockBadge(`english_${attempt.topicId}`);
+  if (firstAttempt && correct) addXP(correct * 5, `English assessment: ${correct}/50 correct`);
+  else {
+    updateHUD();
+    persistState();
+  }
+  renderEnglishTopicCards();
+  const topic = ENGLISH_TOPICS.find(item => item.id === attempt.topicId);
+  const panel = document.getElementById('englishAssessmentPanel');
+  document.getElementById('englishQuestionMount').classList.add('hidden');
+  document.querySelector('.english-exam-progress-row').classList.add('hidden');
+  document.querySelector('.english-exam-progress-track').classList.add('hidden');
+  document.querySelector('.english-exam-controls').classList.add('hidden');
+  document.querySelector('.english-exam-submit-row').classList.add('hidden');
+  const result = document.getElementById('englishAssessmentResult');
+  result.classList.remove('hidden');
+  result.innerHTML = `<h4>${timesUp ? '⏱️ Time is up' : 'Assessment submitted'}: ${escapeEnglishHTML(topic.title)}</h4><p>Your score: <strong>${correct}/50 (${Math.round(correct / 50 * 100)}%)</strong>. Best score: <strong>${bestCorrect}/50 (${bestPercent}%)</strong>.</p><p>${bestPercent >= 80 ? '🏅 Topic badge earned!' : bestPercent >= 70 ? 'You qualify for this topic certificate.' : 'Review Kapil’s notes and try again to reach 70% for a certificate.'}</p><div class="english-topic-actions"><button type="button" class="btn btn-primary" onclick="startEnglishAssessment('${topic.id}')">↻ Retake assessment</button>${bestPercent >= 70 ? `<button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}')">📜 Download topic certificate</button>` : ''}</div>`;
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast(timesUp ? 'Time is up. Your assessment has been submitted.' : `Assessment complete: ${correct}/50 correct.`);
+}
+
+function downloadEnglishCertificate(topicId) {
+  const topic = ENGLISH_TOPICS.find(item => item.id === topicId);
+  const result = state.englishAssessments[topicId];
+  if (!topic || !result || result.bestPercent < 70) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1400;
+  canvas.height = 990;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFDF9'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#D4AF37'; ctx.lineWidth = 10; ctx.strokeRect(32, 32, canvas.width - 64, canvas.height - 64);
+  ctx.strokeStyle = '#FF5500'; ctx.lineWidth = 3; ctx.strokeRect(52, 52, canvas.width - 104, canvas.height - 104);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#FF5500'; ctx.font = '700 34px sans-serif'; ctx.fillText('JIET • MENTORSHIP WITH KAPIL', 700, 170);
+  ctx.fillStyle = '#C28B38'; ctx.font = '700 22px sans-serif'; ctx.fillText('CERTIFICATE OF ACHIEVEMENT', 700, 270);
+  ctx.fillStyle = '#0F172A'; ctx.font = '700 58px Georgia, serif'; ctx.fillText(topic.title, 700, 370);
+  ctx.fillStyle = '#64748B'; ctx.font = '24px sans-serif'; ctx.fillText('This certificate is proudly awarded to', 700, 470);
+  ctx.fillStyle = '#FF5500'; ctx.font = '700 54px Georgia, serif'; ctx.fillText(getCertificateRecipientName().toUpperCase(), 700, 555);
+  ctx.fillStyle = '#334155'; ctx.font = '24px sans-serif'; ctx.fillText(`Best score ${result.bestCorrect}/50 (${result.bestPercent}%) · Timed placement English assessment`, 700, 660);
+  ctx.fillText(`Certificate ID: ${result.certificateId}`, 700, 715);
+  ctx.fillText(`Issued ${new Date(result.bestCompletedAt || result.completedAt || Date.now()).toLocaleDateString('en-GB')}`, 700, 765);
+  ctx.font = '700 22px sans-serif'; ctx.fillText('Placement Readiness Mentorship With Kapil', 700, 850);
+  const link = document.createElement('a');
+  link.download = `JIET_${topicId}_Certificate_${state.learnerName.replace(/\s+/g, '_')}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 
 function getCertificateRecipientName() {
@@ -1246,7 +1487,9 @@ function updateHUD() {
                          CAREER_ASSESSMENTS.communication.length +
                          APTITUDE_QUESTIONS.length;
   const answeredCount = Object.keys(state.answeredQuestions).length;
-  const pct = Math.min(100, Math.max(5, Math.round((answeredCount / totalQuestions) * 100)));
+  const completedEnglishAssessments = Object.keys(state.englishAssessments).length;
+  const englishTotalQuestions = ENGLISH_TOPICS.length * 50;
+  const pct = Math.min(100, Math.max(5, Math.round(((answeredCount + completedEnglishAssessments * 50) / (totalQuestions + englishTotalQuestions)) * 100)));
   document.getElementById('globalProgressFill').style.width = `${pct}%`;
   const progressTrack = document.querySelector('.global-progress-track[role="progressbar"]');
   if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(pct));
@@ -1340,6 +1583,9 @@ function checkBadgeUnlocks() {
   ].forEach(({ key, badge, threshold }) => {
     const result = getAssessmentResult(CAREER_ASSESSMENTS[key]);
     if (result.complete && result.percentage >= threshold) unlockBadge(badge);
+  });
+  ENGLISH_TOPICS.forEach(topic => {
+    if ((state.englishAssessments[topic.id]?.bestPercent || 0) >= 80) unlockBadge(`english_${topic.id}`);
   });
 }
 
@@ -1505,6 +1751,10 @@ function renderAllQuestionSets() {
   renderMultipleChoiceList('reasoningAssessmentContainer', CAREER_ASSESSMENTS.reasoning, 25);
   renderMultipleChoiceList('dataAssessmentContainer', CAREER_ASSESSMENTS.dataInterpretation, 25);
   renderMultipleChoiceList('spatialAssessmentContainer', CAREER_ASSESSMENTS.spatialReasoning, 25);
+  renderEnglishTopicCards();
+  const englishPanel = document.getElementById('englishAssessmentPanel');
+  if (state.activeEnglishAssessment) activateEnglishAssessmentUI(state.activeEnglishAssessment.topicId);
+  else if (englishPanel) englishPanel.classList.add('hidden');
 }
 
 function handleOptionSelect(question, selectedKey, btnEl, cardEl, xpPerQuestion) {
@@ -1694,6 +1944,7 @@ function switchTab(tabId) {
     b.setAttribute('aria-current', b.dataset.tab === tabId ? 'page' : 'false');
   });
 
+  persistState();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -2073,6 +2324,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   renderAllQuestionSets();
+  switchTab(state.activeTab);
   const certInput = document.getElementById('certCustomName');
   if (certInput && !certInput.value) certInput.value = state.learnerName;
 
