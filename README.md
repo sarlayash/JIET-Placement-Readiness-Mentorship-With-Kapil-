@@ -16,11 +16,11 @@
 ### 📱 Install as Mobile App (PWA)
 - **Android / Chrome / Edge:** Open the web app and tap the **"📲 Install App"** button in the header or your browser menu.
 - **iOS / Safari:** Tap the **Share** button `⎋`, then select **"Add to Home Screen"** `➕`.
-- After the app shell loads once online, the lessons, styles, scripts, and local images are cached for offline use. Google Fonts still require an internet connection; system fonts are used when they are unavailable.
+- After the app shell loads once online, the complete curriculum, styles, scripts, and local images are cached for offline use. Google Fonts still require an internet connection; system fonts are used when they are unavailable.
 
 ---
 
-## 🚀 Key Modules & Curriculum (CPCV13-05M)
+## 🚀 Career Readiness Curriculum
 
 1. **Level 1: 📖 Concept Foundations**
    - **Sentence Completion:** Proactive solving, clue identification, Support vs. Contrast signposts, Root-word prefixes (`pro-`, `bene-`, `mal-`) & suffixes (`-cide`, `-less`), cause-and-effect structures.
@@ -37,11 +37,13 @@
    - Page 2 & 3 Advanced Fragment Rearrangements (Questions 11 to 20).
 5. **Level 5: 🧪 Passage Cloze Test**
    - Chemistry Discourse Cloze Test (Questions 21 to 25).
-6. **Level 6: 🏆 Certificate of Placement Readiness**
-   - Dynamic recipient naming, live verification ID, 1-click **Download as PNG** (high-res canvas) and print-ready PDF styling.
+6. **Level 6: 🤝 Workplace Soft Skills:** Teamwork, conflict resolution, accountability, prioritization, adaptability, feedback, ethics, leadership, and interview reflection, with a 10-question scenario assessment.
+7. **Level 7: 💬 Professional Communication:** Listening, concise workplace writing, meetings, presentations, virtual presence, stakeholder updates, and clarification, with a 10-question scenario assessment.
+8. **Level 8: 🧠 Placement Aptitude:** 20 quantitative questions; 16 logical and analytical reasoning questions; 10 data interpretation questions; and 6 spatial reasoning questions. Existing Sentence Battles, Para-Jumbles, and Cloze modules cover verbal aptitude. CPCV13-05M remains the official verbal curriculum.
+9. **Level 9: 🏆 Certificates:** Downloadable Soft Skills, Communication, and Aptitude certificates unlock after every question in that track is answered and the learner scores at least 70%. The overall certificate is available from the Certificates tab.
 
 ### 🔗 Connected Topics
-- The Concept Mastery foundation now links signposts to proactive drills, roots to sentence practice, paragraph clues to Para-Jumbles, and context clues to the cloze passage.
+- The Concept Mastery foundation links verbal concepts to the existing drills and practice modules, plus soft skills, communication, and aptitude assessments.
 
 ---
 
@@ -49,7 +51,7 @@
 
 - **⚡ Placement XP:** Earn XP for correct answers, time bonuses, and mastery milestones.
 - **🔥 Streaks:** Streak multipliers for consecutive correct solutions.
-- **🏅 8 Placement Badges:**
+- **🏅 14 Placement Readiness Badges:**
   - 🚀 *Fresh Recruit*
   - 🔍 *Signpost Detective*
   - 💡 *Proactive Thinker*
@@ -58,6 +60,12 @@
   - 🧩 *Jumble Maestro*
   - 🧪 *Logic Alchemist*
   - 🏆 *Placement Prodigy*
+  - 🤝 *Teamwork Pro*
+  - 💬 *Communication Ace*
+  - ➗ *Quant Master*
+  - 🧠 *Reasoning Ace*
+  - 📊 *Data Analyst*
+  - 🔷 *Spatial Solver*
 - **🔊 Sound FX:** Real-time synthesized web audio effects.
 - **🎊 Confetti:** Celebratory canvas confetti particle physics.
 

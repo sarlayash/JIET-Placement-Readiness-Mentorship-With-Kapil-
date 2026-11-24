@@ -1,9 +1,10 @@
-const CACHE_NAME = 'jiet-kapil-placement-v3';
+const CACHE_NAME = 'jiet-kapil-placement-v4';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './career-curriculum.js',
   './manifest.json',
   './assets/kapil_faceprep_banner.png',
   './assets/kapil_avatar.png',
