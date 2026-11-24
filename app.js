@@ -19,7 +19,7 @@ const state = {
   rahulOrder: [1, 2, 3, 4, 5, 6, 7, 8, 9] // 1-based indices of the 9 events
 };
 
-// 8 Official Placement Badges
+// Placement readiness badges across verbal, aptitude, communication, and workplace skills
 const BADGES_CONFIG = [
   { id: 'recruit', icon: '🚀', title: 'Fresh Recruit', desc: 'Enrolled in Kapil\'s Placement Mentorship.' },
   { id: 'detective', icon: '🔍', title: 'Signpost Detective', desc: 'Identified clues, support & contrast signs in sentence completion.' },
@@ -28,8 +28,27 @@ const BADGES_CONFIG = [
   { id: 'sentence_ace', icon: '✍️', title: 'Sentence Architect', desc: 'Scored high on Sentence Completion Practice & Review questions.' },
   { id: 'jumble_maestro', icon: '🧩', title: 'Jumble Maestro', desc: 'Conquered complex sentence & fragment rearrangements.' },
   { id: 'cloze_master', icon: '🧪', title: 'Logic Alchemist', desc: 'Aced the Chemistry Discourse Cloze passage.' },
-  { id: 'placement_prodigy', icon: '🏆', title: 'Placement Prodigy', desc: 'Earned 1000+ XP and unlocked the Official Certificate of Mastery.' }
+  { id: 'placement_prodigy', icon: '🏆', title: 'Placement Prodigy', desc: 'Earned 1000+ XP and unlocked the Official Certificate of Mastery.' },
+  { id: 'soft_skills_pro', icon: '🤝', title: 'Teamwork Pro', desc: 'Scored 80% or higher on the Soft Skills assessment.' },
+  { id: 'communication_ace', icon: '💬', title: 'Communication Ace', desc: 'Scored 80% or higher on the Professional Communication assessment.' },
+  { id: 'quant_master', icon: '➗', title: 'Quant Master', desc: 'Scored 75% or higher on the Quantitative Aptitude assessment.' },
+  { id: 'reasoning_ace', icon: '🧠', title: 'Reasoning Ace', desc: 'Scored 75% or higher on the Logical Reasoning assessment.' },
+  { id: 'data_analyst', icon: '📊', title: 'Data Analyst', desc: 'Scored 75% or higher on the Data Interpretation assessment.' },
+  { id: 'spatial_solver', icon: '🔷', title: 'Spatial Solver', desc: 'Scored 75% or higher on the Spatial Reasoning assessment.' }
 ];
+
+const BADGE_TOTAL = BADGES_CONFIG.length;
+const APTITUDE_QUESTIONS = [
+  ...CAREER_ASSESSMENTS.quantitative,
+  ...CAREER_ASSESSMENTS.reasoning,
+  ...CAREER_ASSESSMENTS.dataInterpretation,
+  ...CAREER_ASSESSMENTS.spatialReasoning
+];
+const CAREER_CERTIFICATES = {
+  softSkills: { title: 'Professional Soft Skills', questions: CAREER_ASSESSMENTS.softSkills },
+  communication: { title: 'Professional Communication', questions: CAREER_ASSESSMENTS.communication },
+  aptitude: { title: 'Placement Aptitude', questions: APTITUDE_QUESTIONS }
+};
 
 // Audio Synthesizer (Zero external dependencies)
 class SoundFX {
@@ -970,19 +989,119 @@ function persistState() {
   }
 }
 
+function getAssessmentResult(questions) {
+  const answered = questions.filter(q => state.answeredQuestions[q.id]).length;
+  const correct = questions.filter(q => state.answeredQuestions[q.id]?.correct).length;
+  return {
+    answered,
+    correct,
+    total: questions.length,
+    complete: answered === questions.length,
+    percentage: questions.length ? Math.round((correct / questions.length) * 100) : 0
+  };
+}
+
+function updateCareerTrackUI() {
+  const trackDisplays = [
+    { id: 'softSkills', questions: CAREER_ASSESSMENTS.softSkills, certificate: CAREER_CERTIFICATES.softSkills },
+    { id: 'communication', questions: CAREER_ASSESSMENTS.communication, certificate: CAREER_CERTIFICATES.communication },
+    { id: 'aptitude', questions: APTITUDE_QUESTIONS, certificate: CAREER_CERTIFICATES.aptitude }
+  ];
+
+  trackDisplays.forEach((track) => {
+    const result = getAssessmentResult(track.questions);
+    const progress = document.getElementById(`${track.id}Progress`);
+    const certificateButton = document.getElementById(`${track.id}CertificateBtn`);
+    const eligible = result.complete && result.percentage >= 70;
+    if (progress) {
+      progress.textContent = `${result.answered}/${result.total} answered · ${result.correct} correct · ${result.percentage}%`;
+    }
+    if (certificateButton) {
+      certificateButton.disabled = !eligible;
+      certificateButton.textContent = eligible
+        ? `📜 Download ${track.certificate.title} Certificate`
+        : 'Answer every question and score at least 70% to unlock';
+    }
+  });
+}
+
+function downloadTrackCertificate(trackId) {
+  const track = CAREER_CERTIFICATES[trackId];
+  if (!track) return;
+  const result = getAssessmentResult(track.questions);
+  if (!result.complete || result.percentage < 70) {
+    showToast('Complete the assessment with at least 70% to unlock this certificate.');
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1400;
+  canvas.height = 990;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFDF9';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#D4AF37';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(32, 32, canvas.width - 64, canvas.height - 64);
+  ctx.strokeStyle = '#FF5500';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(52, 52, canvas.width - 104, canvas.height - 104);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FF5500';
+  ctx.font = '700 34px "Space Grotesk", sans-serif';
+  ctx.fillText('JIET • POWERED BY FACE PREP', canvas.width / 2, 155);
+  ctx.fillStyle = '#C28B38';
+  ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('CERTIFICATE OF ACHIEVEMENT', canvas.width / 2, 245);
+  ctx.fillStyle = '#0F172A';
+  ctx.font = '700 58px "Cinzel", Georgia, serif';
+  ctx.fillText(track.title, canvas.width / 2, 340);
+  ctx.fillStyle = '#64748B';
+  ctx.font = '24px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('This certificate is proudly awarded to', canvas.width / 2, 430);
+  ctx.fillStyle = '#FF5500';
+  ctx.font = '700 54px "Cinzel", Georgia, serif';
+  ctx.fillText(state.learnerName.toUpperCase(), canvas.width / 2, 510);
+  ctx.strokeStyle = '#D4AF37';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(300, 540);
+  ctx.lineTo(1100, 540);
+  ctx.stroke();
+
+  ctx.fillStyle = '#334155';
+  ctx.font = '22px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(`has completed the ${track.title} assessment`, canvas.width / 2, 620);
+  ctx.fillText(`with a score of ${result.percentage}% (${result.correct}/${result.total} correct)`, canvas.width / 2, 665);
+  ctx.fillText(`Issued ${new Date().toLocaleDateString('en-GB')}`, canvas.width / 2, 730);
+  ctx.fillStyle = '#0F172A';
+  ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Mentorship With Kapil • JIET Placement Readiness', canvas.width / 2, 825);
+
+  const link = document.createElement('a');
+  link.download = `JIET_${trackId}_Certificate_${state.learnerName.replace(/\s+/g, '_')}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast(`${track.title} certificate downloaded! 🏆`);
+}
+
 function updateHUD() {
   document.getElementById('hudXP').textContent = state.xp.toLocaleString();
   document.getElementById('hudStreak').textContent = state.streak;
   document.getElementById('hudLevel').textContent = `Lvl ${state.level}`;
   document.getElementById('navUserName').textContent = state.learnerName;
-  document.getElementById('badgeCount').textContent = `${state.unlockedBadges.size}/8`;
+  document.getElementById('badgeCount').textContent = `${state.unlockedBadges.size}/${BADGE_TOTAL}`;
   document.getElementById('soundIcon').textContent = state.soundEnabled ? '🔊' : '🔇';
 
   // Global Progress percentage calculation
   const totalQuestions = PROACTIVE_DRILLS.length + POS_DRILLS.length + 1 + 
                          SENTENCE_PAGE_1.length + SENTENCE_PAGE_2.length + 
                          PARAJUMBLES_PAGE_1.length + PARAJUMBLES_PAGE_2_3.length + 
-                         CLOZE_QUESTIONS.length;
+                         CLOZE_QUESTIONS.length +
+                         CAREER_ASSESSMENTS.softSkills.length +
+                         CAREER_ASSESSMENTS.communication.length +
+                         APTITUDE_QUESTIONS.length;
   const answeredCount = Object.keys(state.answeredQuestions).length;
   const pct = Math.min(100, Math.max(5, Math.round((answeredCount / totalQuestions) * 100)));
   document.getElementById('globalProgressFill').style.width = `${pct}%`;
@@ -995,12 +1114,13 @@ function updateHUD() {
   const certXP = document.getElementById('certScoreXP');
   if (certXP) certXP.textContent = `${state.xp.toLocaleString()} XP`;
   const certBadges = document.getElementById('certBadgesEarned');
-  if (certBadges) certBadges.textContent = `${state.unlockedBadges.size} of 8 Unlocked`;
+  if (certBadges) certBadges.textContent = `${state.unlockedBadges.size} of ${BADGE_TOTAL} Unlocked`;
   const certDate = document.getElementById('certDateDisplay');
   if (certDate) {
     const now = new Date();
     certDate.textContent = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   }
+  updateCareerTrackUI();
 }
 
 function addXP(amount, reason = '') {
@@ -1064,6 +1184,18 @@ function checkBadgeUnlocks() {
 
   // Placement Prodigy: 1000+ XP
   if (state.xp >= 1000) unlockBadge('placement_prodigy');
+
+  [
+    { key: 'softSkills', badge: 'soft_skills_pro', threshold: 80 },
+    { key: 'communication', badge: 'communication_ace', threshold: 80 },
+    { key: 'quantitative', badge: 'quant_master', threshold: 75 },
+    { key: 'reasoning', badge: 'reasoning_ace', threshold: 75 },
+    { key: 'dataInterpretation', badge: 'data_analyst', threshold: 75 },
+    { key: 'spatialReasoning', badge: 'spatial_solver', threshold: 75 }
+  ].forEach(({ key, badge, threshold }) => {
+    const result = getAssessmentResult(CAREER_ASSESSMENTS[key]);
+    if (result.complete && result.percentage >= threshold) unlockBadge(badge);
+  });
 }
 
 function showToast(message) {
@@ -1256,6 +1388,7 @@ function handleOptionSelect(question, selectedKey, btnEl, cardEl, xpPerQuestion)
     }
   }
 
+  checkBadgeUnlocks();
   updateHUD();
   persistState();
 }
@@ -1459,15 +1592,15 @@ function downloadCertificatePNG() {
   // Certificate Title
   ctx.fillStyle = '#C28B38';
   ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('JIET • CERTIFICATE OF VERBAL APTITUDE & REASONING EXCELLENCE', canvas.width / 2, 190);
+  ctx.fillText('JIET • CAREER READINESS & PLACEMENT PREPARATION', canvas.width / 2, 190);
 
   ctx.fillStyle = '#0F172A';
   ctx.font = 'bold 42px "Cinzel", Georgia, serif';
-  ctx.fillText('JIET Placement Readiness Mentorship', canvas.width / 2, 245);
+  ctx.fillText('JIET Career Readiness Mentorship', canvas.width / 2, 245);
 
   ctx.fillStyle = '#555';
   ctx.font = '600 17px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('Mentorship With Kapil • Powered By FACE Prep • Module: CPCV13-05M', canvas.width / 2, 280);
+  ctx.fillText('Mentorship With Kapil • Powered By FACE Prep', canvas.width / 2, 280);
 
   // Awarded to
   ctx.fillStyle = '#777';
@@ -1490,8 +1623,8 @@ function downloadCertificatePNG() {
   // Achievement text
   ctx.fillStyle = '#374151';
   ctx.font = '16px "Plus Jakarta Sans", sans-serif';
-  const text1 = 'for demonstrating outstanding competence, analytical reasoning, and complete mastery';
-  const text2 = 'over sentence completion, root-word clues, and paragraph jumbles under the official JIET placement program.';
+  const text1 = 'for demonstrating progress in verbal and quantitative aptitude, logical reasoning,';
+  const text2 = 'professional communication, and workplace soft skills through JIET placement readiness.';
   ctx.fillText(text1, canvas.width / 2, 465);
   ctx.fillText(text2, canvas.width / 2, 492);
 
@@ -1505,8 +1638,8 @@ function downloadCertificatePNG() {
   ctx.fillStyle = '#111';
   ctx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
   ctx.fillText(`Total Score: ${state.xp.toLocaleString()} XP`, 280, 572);
-  ctx.fillText(`Badges: ${state.unlockedBadges.size}/8 Unlocked`, 520, 572);
-  ctx.fillText(`Curriculum: JIET / CPCV13-05M`, 740, 572);
+  ctx.fillText(`Badges: ${state.unlockedBadges.size}/${BADGE_TOTAL} Unlocked`, 520, 572);
+  ctx.fillText('JIET Career Readiness', 740, 572);
   ctx.fillText(`Verified Placement Ready`, 940, 572);
 
   // Signatures
@@ -1593,7 +1726,7 @@ function openProfileModal() {
   document.getElementById('profileInputRename').value = state.learnerName === 'Learner' ? '' : state.learnerName;
   document.getElementById('profileStatXP').textContent = `⚡ ${state.xp.toLocaleString()} XP`;
   document.getElementById('profileStatLevel').textContent = `⭐ Level ${state.level}`;
-  document.getElementById('profileStatBadges').textContent = `🏅 ${state.unlockedBadges.size}/8 Badges`;
+  document.getElementById('profileStatBadges').textContent = `🏅 ${state.unlockedBadges.size}/${BADGE_TOTAL} Badges`;
   modal.classList.remove('hidden');
 }
 
@@ -1732,6 +1865,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderMultipleChoiceList('parajumblesPage1Container', PARAJUMBLES_PAGE_1, 80);
   renderMultipleChoiceList('parajumblesPage2Container', PARAJUMBLES_PAGE_2_3, 80);
   renderMultipleChoiceList('clozeQuestionsContainer', CLOZE_QUESTIONS, 70);
+  renderMultipleChoiceList('softSkillsAssessmentContainer', CAREER_ASSESSMENTS.softSkills, 25);
+  renderMultipleChoiceList('communicationAssessmentContainer', CAREER_ASSESSMENTS.communication, 25);
+  renderMultipleChoiceList('quantitativeAssessmentContainer', CAREER_ASSESSMENTS.quantitative, 25);
+  renderMultipleChoiceList('reasoningAssessmentContainer', CAREER_ASSESSMENTS.reasoning, 25);
+  renderMultipleChoiceList('dataAssessmentContainer', CAREER_ASSESSMENTS.dataInterpretation, 25);
+  renderMultipleChoiceList('spatialAssessmentContainer', CAREER_ASSESSMENTS.spatialReasoning, 25);
 
   // Register Navigation clicks
   document.querySelectorAll('.nav-tab').forEach(tab => {
