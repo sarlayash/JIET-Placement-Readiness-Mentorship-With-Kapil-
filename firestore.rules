@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isUnlocked(uid) {
+      let lockPath = /databases/$(database)/documents/learnerLocks/$(uid);
+      return !exists(lockPath) || get(lockPath).data.until <= request.time;
+    }
+
+    function validLearnerRecord(uid) {
+      return request.resource.data.keys().hasOnly([
+          'uid', 'learnerName', 'email', 'photoURL', 'xp', 'level', 'streak',
+          'badgeCount', 'unlockedBadges', 'answeredQuestionCount', 'learningLevels',
+          'englishAssessments', 'mockAssessments', 'passedMocks', 'certificateIssued',
+          'clientUpdatedAt', 'profileData', 'updatedAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.learnerName is string
+        && request.resource.data.email is string
+        && request.resource.data.xp is int
+        && request.resource.data.level is int
+        && request.resource.data.badgeCount is int
+        && request.resource.data.unlockedBadges is list
+        && request.resource.data.learningLevels is list
+        && request.resource.data.englishAssessments is map
+        && request.resource.data.mockAssessments is map
+        && request.resource.data.profileData is map
+        && request.resource.data.clientUpdatedAt is int
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function validLearnerLock(uid) {
+      return request.resource.data.keys().hasOnly([
+          'uid', 'until', 'reason', 'source', 'updatedBy', 'updatedAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.source == 'proctor'
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.until is timestamp
+        && request.resource.data.until > request.time
+        && request.resource.data.until <= request.time + duration.value(24, 'h')
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /admins/{uid} {
+      allow get: if isOwner(uid);
+      allow list, create, update, delete: if false;
+    }
+
+    match /learners/{uid} {
+      allow get, list: if isAdmin() || isOwner(uid);
+      allow create: if isOwner(uid) && isUnlocked(uid) && validLearnerRecord(uid);
+      allow update: if isOwner(uid) && isUnlocked(uid) && validLearnerRecord(uid);
+      allow delete: if isAdmin();
+    }
+
+    match /learnerLocks/{uid} {
+      allow get, list: if isAdmin() || isOwner(uid);
+      allow create: if isAdmin() || (isOwner(uid) && validLearnerLock(uid));
+      allow update: if isAdmin() || (
+        isOwner(uid)
+        && validLearnerLock(uid)
+        && request.resource.data.until >= resource.data.until
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /adminAudit/{eventId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['action', 'learnerUid', 'reason', 'adminUid', 'createdAt'])
+        && request.resource.data.action in ['lock_profile', 'unlock_profile']
+        && request.resource.data.adminUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

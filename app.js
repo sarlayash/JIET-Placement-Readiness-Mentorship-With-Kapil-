@@ -23,6 +23,8 @@ const state = {
   activeMockAssessment: null,
   proctorLockUntil: 0,
   proctorViolationCount: 0,
+  remoteProctorLockActive: false,
+  syncUpdatedAt: 0,
   activeTab: 'tab-concepts',
   rahulOrder: [5, 1, 8, 3, 7, 2, 9, 4, 6] // start scrambled so the timeline cannot be claimed untouched
 };
@@ -36,6 +38,13 @@ let lastLevelCompletionKey = null;
 let authUser = null;
 let appInitialized = false;
 let pendingFirebaseUser = null;
+let authStateVersion = 0;
+let cloudSaveTimeout = null;
+let pendingCloudRecord = null;
+let learnerLockUnsubscribe = null;
+let adminDataUnsubscribe = null;
+let adminLearnerRecords = [];
+let adminLockRecords = new Map();
 
 const LEVEL_BADGES = [
   { id: 'level_foundations', icon: '📖', title: 'Foundation Builder', desc: 'Passed Level 1 Foundations with at least 70%.' },
@@ -1047,6 +1056,8 @@ function createFreshLearnerState(name = 'Learner') {
   state.activeMockAssessment = null;
   state.proctorLockUntil = 0;
   state.proctorViolationCount = 0;
+  state.remoteProctorLockActive = false;
+  state.syncUpdatedAt = 0;
   state.rahulOrder = [5, 1, 8, 3, 7, 2, 9, 4, 6];
 }
 
@@ -1158,6 +1169,8 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     ? Math.max(0, Math.min(Date.now() + PROCTOR_LOCK_DURATION, Number(safeData.proctorLockUntil)))
     : 0;
   const proctorViolationCount = Math.max(0, Math.min(PROCTOR_VIOLATION_LIMIT - 1, Math.floor(Number(safeData.proctorViolationCount) || 0)));
+  const remoteProctorLockActive = safeData.remoteProctorLockActive === true;
+  const syncUpdatedAt = Number.isFinite(Number(safeData.syncUpdatedAt)) ? Math.max(0, Number(safeData.syncUpdatedAt)) : 0;
 
   return {
     learnerName: name,
@@ -1177,6 +1190,8 @@ function sanitizeLearnerState(data, fallbackName = 'Learner') {
     activeMockAssessment: validActiveMock,
     proctorLockUntil,
     proctorViolationCount,
+    remoteProctorLockActive,
+    syncUpdatedAt,
     rahulOrder: safeOrder,
     activeTab: validTabs.has(safeData.activeTab) ? safeData.activeTab : 'tab-concepts'
   };
@@ -1199,6 +1214,8 @@ function applyLearnerState(data, fallbackName) {
   state.activeMockAssessment = safeData.activeMockAssessment;
   state.proctorLockUntil = safeData.proctorLockUntil;
   state.proctorViolationCount = safeData.proctorViolationCount;
+  state.remoteProctorLockActive = safeData.remoteProctorLockActive;
+  state.syncUpdatedAt = safeData.syncUpdatedAt;
   state.rahulOrder = safeData.rahulOrder;
   state.activeTab = safeData.activeTab;
 }
@@ -1278,31 +1295,113 @@ function loadSavedState(authenticatedUser = null) {
 
 function persistState() {
   if (!activeProfileId) return;
+  state.syncUpdatedAt = Date.now();
+  const profileData = {
+    learnerName: state.learnerName,
+    xp: state.xp,
+    streak: state.streak,
+    level: state.level,
+    soundEnabled: state.soundEnabled,
+    certificateId: state.certificateId,
+    certificateIssued: state.certificateIssued,
+    unlockedBadges: Array.from(state.unlockedBadges),
+    answeredQuestions: state.answeredQuestions,
+    englishAssessments: state.englishAssessments,
+    activeEnglishAssessment: state.activeEnglishAssessment,
+    mockAssessments: state.mockAssessments,
+    activeMockAssessment: state.activeMockAssessment,
+    proctorLockUntil: state.proctorLockUntil,
+    proctorViolationCount: state.proctorViolationCount,
+    remoteProctorLockActive: state.remoteProctorLockActive,
+    syncUpdatedAt: state.syncUpdatedAt,
+    rahulOrder: state.rahulOrder,
+    activeTab: state.activeTab
+  };
   try {
-    learnerProfiles[activeProfileId] = {
-      learnerName: state.learnerName,
-      xp: state.xp,
-      streak: state.streak,
-      level: state.level,
-      soundEnabled: state.soundEnabled,
-      certificateId: state.certificateId,
-      certificateIssued: state.certificateIssued,
-      unlockedBadges: Array.from(state.unlockedBadges),
-      answeredQuestions: state.answeredQuestions,
-      englishAssessments: state.englishAssessments,
-      activeEnglishAssessment: state.activeEnglishAssessment,
-      mockAssessments: state.mockAssessments,
-      activeMockAssessment: state.activeMockAssessment,
-      proctorLockUntil: state.proctorLockUntil,
-      proctorViolationCount: state.proctorViolationCount,
-      rahulOrder: state.rahulOrder,
-      activeTab: state.activeTab
-    };
+    learnerProfiles[activeProfileId] = profileData;
     localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(learnerProfiles));
     localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, activeProfileId);
   } catch (e) {
     console.error('Failed to save state to localStorage', e);
   }
+  if (authUser?.uid && window.firebaseSaveLearner) {
+    pendingCloudRecord = buildCloudLearnerRecord(profileData);
+    if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
+    cloudSaveTimeout = setTimeout(() => { flushPendingCloudSave(); }, 650);
+  }
+}
+
+function buildCloudLearnerRecord(profileData = null) {
+  const learnerState = profileData || {
+    learnerName: state.learnerName,
+    xp: state.xp,
+    streak: state.streak,
+    level: state.level,
+    certificateId: state.certificateId,
+    certificateIssued: state.certificateIssued,
+    unlockedBadges: Array.from(state.unlockedBadges),
+    answeredQuestions: state.answeredQuestions,
+    englishAssessments: state.englishAssessments,
+    activeEnglishAssessment: state.activeEnglishAssessment,
+    mockAssessments: state.mockAssessments,
+    activeMockAssessment: state.activeMockAssessment,
+    proctorLockUntil: state.proctorLockUntil,
+    proctorViolationCount: state.proctorViolationCount,
+    remoteProctorLockActive: state.remoteProctorLockActive,
+    syncUpdatedAt: state.syncUpdatedAt,
+    rahulOrder: state.rahulOrder,
+    activeTab: state.activeTab
+  };
+  const learningLevels = getLearningLevelProgress().map(level => ({
+    id: level.id,
+    title: level.title,
+    complete: level.complete,
+    answered: level.result.answered,
+    total: level.result.total,
+    percentage: level.result.percentage
+  }));
+  const passedMocks = Object.values(learnerState.mockAssessments || {}).filter(result => result?.passed).length;
+  return {
+    uid: authUser.uid,
+    learnerName: learnerState.learnerName,
+    email: authUser.email || '',
+    photoURL: authUser.photoURL || '',
+    xp: learnerState.xp,
+    level: learnerState.level,
+    streak: learnerState.streak,
+    badgeCount: learnerState.unlockedBadges.length,
+    unlockedBadges: learnerState.unlockedBadges,
+    answeredQuestionCount: Object.keys(learnerState.answeredQuestions || {}).length,
+    learningLevels,
+    englishAssessments: learnerState.englishAssessments,
+    mockAssessments: learnerState.mockAssessments,
+    passedMocks,
+    certificateIssued: learnerState.certificateIssued,
+    clientUpdatedAt: learnerState.syncUpdatedAt,
+    profileData: learnerState
+  };
+}
+
+function flushPendingCloudSave() {
+  if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
+  cloudSaveTimeout = null;
+  if (!pendingCloudRecord || !authUser?.uid || !window.firebaseSaveLearner) return Promise.resolve();
+  const record = pendingCloudRecord;
+  const uid = authUser.uid;
+  pendingCloudRecord = null;
+  return window.firebaseSaveLearner(uid, record).then(() => setCloudSyncStatus('Progress synced to Firebase.'))
+    .catch(error => {
+      pendingCloudRecord = record;
+      setCloudSyncStatus('Cloud sync is unavailable. Progress remains saved on this device.');
+      console.warn('Learner progress sync failed:', error?.code || error);
+    });
+}
+
+window.addEventListener?.('online', () => { flushPendingCloudSave(); });
+
+function setCloudSyncStatus(message) {
+  const status = document.getElementById('cloudSyncStatus');
+  if (status) status.textContent = message;
 }
 
 function getAssessmentResult(questions) {
@@ -1936,6 +2035,11 @@ function recordProctorViolation(reason) {
     mockTimerInterval = null;
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
     showToast('Three proctor warnings. This local learner profile is locked for 24 hours.');
+    if (authUser?.uid && window.firebaseLockLearner) {
+      window.firebaseLockLearner(authUser.uid, state.proctorLockUntil, 'Three proctor warnings during a timed assessment.', 'proctor')
+        .then(() => { state.remoteProctorLockActive = true; persistState(); })
+        .catch(handleFirebaseCloudError);
+    }
     renderProctorLockScreen();
   } else showToast(`Proctor warning ${attempt.violations}/${PROCTOR_VIOLATION_LIMIT}: ${reason}.`);
   persistState();
@@ -1964,6 +2068,21 @@ function renderProctorLockScreen() {
   };
   tick();
   if (!proctorLockInterval) proctorLockInterval = setInterval(tick, 1000);
+}
+
+function handleCloudLearnerLock(lockRecord) {
+  if (lockRecord?.until) {
+    state.proctorLockUntil = typeof lockRecord.until.toMillis === 'function'
+      ? lockRecord.until.toMillis()
+      : Number(lockRecord.until) || 0;
+    state.remoteProctorLockActive = true;
+  } else if (state.remoteProctorLockActive) {
+    state.proctorLockUntil = 0;
+    state.proctorViolationCount = 0;
+    state.remoteProctorLockActive = false;
+  }
+  renderProctorLockScreen();
+  persistState();
 }
 
 function downloadMockCertificate(topicId, format = 'png') {
@@ -2597,12 +2716,30 @@ function handleFirebaseAuthError(error) {
   if (code !== 'auth/popup-closed-by-user') console.error('Firebase Authentication error:', code, error?.message || error);
 }
 
-function handleFirebaseAuthState(user) {
+function handleFirebaseCloudError(error) {
+  setCloudSyncStatus('Firebase data is unavailable. Progress is still saved locally.');
+  const status = document.getElementById('adminDashboardStatus');
+  if (status && authUser?.isAdmin) status.textContent = 'Firebase could not load admin data. Check Firestore setup and security rules.';
+  console.warn('Firebase data operation failed:', error?.code || error);
+}
+
+async function handleFirebaseAuthState(user) {
   pendingFirebaseUser = user;
   if (!appInitialized) return;
+  const token = ++authStateVersion;
   const gate = document.getElementById('authGateOverlay');
   if (!user) {
+    learnerLockUnsubscribe?.();
+    learnerLockUnsubscribe = null;
+    adminDataUnsubscribe?.();
+    adminDataUnsubscribe = null;
+    if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
+    cloudSaveTimeout = null;
+    pendingCloudRecord = null;
     authUser = null;
+    activeProfileId = null;
+    const adminButton = document.getElementById('adminDashboardBtn');
+    if (adminButton) adminButton.classList.add('hidden');
     if (gate) gate.classList.remove('hidden');
     const status = document.getElementById('authGateStatus');
     if (status) status.textContent = 'New learners are registered automatically with Google.';
@@ -2610,8 +2747,39 @@ function handleFirebaseAuthState(user) {
   }
 
   const previousUid = authUser?.uid;
+  if (previousUid && previousUid !== user.uid) {
+    learnerLockUnsubscribe?.();
+    learnerLockUnsubscribe = null;
+    adminDataUnsubscribe?.();
+    adminDataUnsubscribe = null;
+    adminLearnerRecords = [];
+    adminLockRecords = new Map();
+    if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
+    cloudSaveTimeout = null;
+    pendingCloudRecord = null;
+  }
   authUser = user;
   loadSavedState(user);
+  setCloudSyncStatus('Loading your Firebase progress…');
+  let cloudRecord = null;
+  if (window.firebaseLoadLearner) {
+    try { cloudRecord = await window.firebaseLoadLearner(user.uid); }
+    catch (error) { handleFirebaseCloudError(error); }
+  }
+  if (token !== authStateVersion || authUser?.uid !== user.uid) return;
+  if (cloudRecord?.profileData && Number(cloudRecord.clientUpdatedAt) >= state.syncUpdatedAt) {
+    applyLearnerState(cloudRecord.profileData, user.displayName);
+    state.syncUpdatedAt = Number(cloudRecord.clientUpdatedAt) || state.syncUpdatedAt;
+    setCloudSyncStatus('Loaded progress from Firebase.');
+  } else if (cloudRecord) setCloudSyncStatus('Local progress is newer; syncing it to Firebase…');
+  else setCloudSyncStatus('Creating your cloud progress record…');
+
+  learnerLockUnsubscribe?.();
+  learnerLockUnsubscribe = null;
+  if (window.firebaseWatchLearnerLock) {
+    learnerLockUnsubscribe = window.firebaseWatchLearnerLock(user.uid, handleCloudLearnerLock, handleFirebaseCloudError);
+  }
+
   renderAllQuestionSets();
   renderMockCenter();
   switchTab(state.activeTab);
@@ -2619,14 +2787,114 @@ function handleFirebaseAuthState(user) {
   if (certificateName && !certificateName.value) certificateName.value = state.learnerName;
   const emailLabel = document.getElementById('profileModalEmail');
   if (emailLabel) emailLabel.textContent = user.email || 'Google account';
+  const adminButton = document.getElementById('adminDashboardBtn');
+  if (adminButton) adminButton.classList.toggle('hidden', !user.isAdmin);
   if (gate) gate.classList.add('hidden');
   updateHUD();
   renderProctorLockScreen();
+  if (state.proctorLockUntil > Date.now() && !state.remoteProctorLockActive && window.firebaseLockLearner) {
+    window.firebaseLockLearner(user.uid, state.proctorLockUntil, 'Migrated local proctor lock.', 'proctor')
+      .then(() => { state.remoteProctorLockActive = true; persistState(); })
+      .catch(handleFirebaseCloudError);
+  }
   persistState();
   if (previousUid !== user.uid) {
     sfx.playCorrect();
     showToast(`Signed in as ${user.displayName}. Your learner profile is ready.`);
   }
+}
+
+function openAdminDashboard() {
+  if (!authUser?.isAdmin) {
+    showToast('This Google account does not have the Firebase admin role.');
+    return;
+  }
+  closeProfileModal();
+  switchTab('tab-admin-dashboard');
+  if (adminDataUnsubscribe) return;
+  if (!window.firebaseWatchAdminData) {
+    handleFirebaseCloudError(new Error('Firestore admin dashboard is unavailable.'));
+    return;
+  }
+  document.getElementById('adminDashboardStatus').textContent = 'Loading Firebase learner records…';
+  adminDataUnsubscribe = window.firebaseWatchAdminData(
+    learners => { adminLearnerRecords = learners; renderAdminDashboard(); },
+    locks => { adminLockRecords = new Map(locks.map(lock => [lock.id, lock])); renderAdminDashboard(); },
+    handleFirebaseCloudError
+  );
+}
+
+function renderAdminDashboard() {
+  const root = document.getElementById('adminLearnerRows');
+  if (!root) return;
+  if (!authUser?.isAdmin) {
+    root.innerHTML = '';
+    return;
+  }
+  const needle = (document.getElementById('adminLearnerSearch')?.value || '').trim().toLowerCase();
+  const filtered = adminLearnerRecords.filter(record =>
+    [record.learnerName, record.email, record.uid, record.id].some(value => String(value || '').toLowerCase().includes(needle))
+  );
+  const status = document.getElementById('adminDashboardStatus');
+  if (status) status.textContent = `${adminLearnerRecords.length} learner profile${adminLearnerRecords.length === 1 ? '' : 's'} in Firebase · showing ${filtered.length}`;
+  root.innerHTML = filtered.map(record => {
+    const uid = record.uid || record.id;
+    const levels = Array.isArray(record.learningLevels) ? record.learningLevels : [];
+    const completedLevels = levels.filter(level => level.complete).length;
+    const lock = adminLockRecords.get(uid);
+    const lockUntil = lock?.until?.toDate ? lock.until.toDate().getTime() : Number(lock?.until) || 0;
+    const locked = Boolean(lock && lockUntil > Date.now());
+    const updatedAt = record.updatedAt?.toDate ? record.updatedAt.toDate() : new Date(Number(record.clientUpdatedAt) || 0);
+    const updatedLabel = Number.isNaN(updatedAt.getTime()) || updatedAt.getTime() === 0 ? '—' : updatedAt.toLocaleString();
+    const action = locked
+      ? `<button class="btn btn-secondary" type="button" onclick="adminUnlockLearner('${escapeEnglishHTML(uid)}')">Unlock profile</button><small>Locked until ${escapeEnglishHTML(new Date(lockUntil).toLocaleString())}</small>`
+      : `<button class="btn btn-secondary" type="button" onclick="adminLockLearner('${escapeEnglishHTML(uid)}')">Lock 24 hours</button>`;
+    return `<tr><td><strong>${escapeEnglishHTML(record.learnerName || 'Learner')}</strong><small>${escapeEnglishHTML(record.email || '')}</small><small title="${escapeEnglishHTML(uid)}">UID ${escapeEnglishHTML(uid.slice(0, 14))}</small></td><td>${Number(record.xp) || 0} XP<small>Level ${Number(record.level) || 1} · streak ${Number(record.streak) || 0}</small></td><td>${Number(record.badgeCount) || 0}/51</td><td>${completedLevels}/${levels.length || 10}</td><td>${Number(record.passedMocks) || 0}/95</td><td>${record.certificateIssued ? 'Issued' : 'Not issued'}</td><td>${escapeEnglishHTML(updatedLabel)}</td><td>${action}</td></tr>`;
+  }).join('') || '<tr><td colspan="8">No learner profiles match this search.</td></tr>';
+}
+
+async function adminLockLearner(uid) {
+  if (!authUser?.isAdmin || !window.firebaseAdminLockLearner) return;
+  const reason = prompt('Reason for the 24-hour profile lock:');
+  if (reason === null) return;
+  try {
+    await window.firebaseAdminLockLearner(uid, Date.now() + PROCTOR_LOCK_DURATION, reason.trim());
+    showToast('Learner profile locked for 24 hours.');
+  } catch (error) { handleFirebaseCloudError(error); }
+}
+
+async function adminUnlockLearner(uid) {
+  if (!authUser?.isAdmin || !window.firebaseUnlockLearner) return;
+  const reason = prompt('Reason for unlocking this learner profile:');
+  if (reason === null) return;
+  try {
+    await window.firebaseUnlockLearner(uid, reason.trim());
+    showToast('Learner profile unlocked.');
+  } catch (error) { handleFirebaseCloudError(error); }
+}
+
+function downloadAdminReport() {
+  if (!authUser?.isAdmin) return;
+  const columns = ['uid', 'learnerName', 'email', 'xp', 'level', 'streak', 'badgeCount', 'answeredQuestionCount', 'learningLevels', 'englishAssessments', 'mockAssessments', 'passedMocks', 'certificateIssued', 'updatedAt', 'profileLockedUntil', 'profileData'];
+  const rows = adminLearnerRecords.map(record => {
+    const lock = adminLockRecords.get(record.uid || record.id);
+    const lockUntil = lock?.until?.toDate ? lock.until.toDate().toISOString() : '';
+    return columns.map(column => {
+      const value = column === 'profileLockedUntil' ? lockUntil : column === 'updatedAt'
+        ? (record.updatedAt?.toDate ? record.updatedAt.toDate().toISOString() : record.clientUpdatedAt || '')
+        : ['learningLevels', 'englishAssessments', 'mockAssessments', 'profileData'].includes(column)
+          ? JSON.stringify(record[column] || [])
+          : column === 'uid' ? record.uid || record.id : record[column] ?? '';
+      return `"${String(value).replace(/"/g, '""')}"`;
+    }).join(',');
+  });
+  const csv = [columns.join(','), ...rows].join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `JIET_learner_progress_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function handleFirebaseSignOutError(error) {
@@ -2931,6 +3199,7 @@ async function handleLogoff() {
     persistState();
     closeProfileModal();
     try {
+      await flushPendingCloudSave();
       await window.firebaseSignOut?.();
     } catch (error) {
       handleFirebaseSignOutError(error);

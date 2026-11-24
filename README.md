@@ -16,12 +16,21 @@
 ### 📱 Install as Mobile App (PWA)
 - **Android / Chrome / Edge:** Open the web app and tap the **"📲 Install App"** button in the header or your browser menu.
 - **iOS / Safari:** Tap the **Share** button `⎋`, then select **"Add to Home Screen"** `➕`.
-- After the app shell and Firebase SDK load once online, the curriculum, styles, scripts, and local images are cached for offline use. Google OAuth sign-in requires an internet connection. Google Fonts also require internet; system fonts are used when unavailable.
-- Sign in with Google to open a learner profile. Assessment progress remains local to that browser and is keyed to the Firebase user ID; it is not synced to Firestore.
+- After the app shell and Firebase SDK load online, the curriculum, styles, scripts, local images, and Firestore cache support offline practice. Google OAuth sign-in requires an internet connection. Google Fonts also require internet; system fonts are used when unavailable.
+- Sign in with Google to open a learner profile. Progress syncs to Firestore when connected and stays cached locally for offline use.
 
 ### Enable Google Authentication
 
 In Firebase Console for project `picture-connect-with-kapil`, enable **Authentication → Sign-in method → Google** and add `sarlayash.github.io` under **Authentication → Settings → Authorized domains**. `localhost` can be used for local development. Firebase Authentication handles sign-up automatically the first time a learner continues with Google.
+
+### Firestore Progress and Admin Dashboard
+
+1. Create a Cloud Firestore database for project `picture-connect-with-kapil`.
+2. Deploy the included security rules with `firebase deploy --only firestore:rules --project picture-connect-with-kapil`.
+3. To grant admin access, have the admin sign in with Google once. In Firebase Authentication, copy that account's UID. In Firestore, create `admins/{UID}` with `active: true` and `role: "admin"`. Admin-role documents cannot be created or changed from the web app.
+4. The admin opens Profile → Admin dashboard to review learner records, download a CSV report, and lock or unlock learner profiles. Profile lock actions are recorded in `adminAudit`.
+
+The dashboard does not use or display a shared `admin/admin` password. Admin permissions are attached to a Firebase-authenticated UID and checked by Firestore rules. Learner assessment answers, attempts, XP, badges, completion levels, certificates, and profile metadata are synced to `learners/{UID}`. Firestore locks are stored separately in `learnerLocks/{UID}` so learners cannot clear an admin lock from the client.
 
 ---
 
@@ -79,8 +88,8 @@ In Firebase Console for project `picture-connect-with-kapil`, enable **Authentic
 
 - Five timed mock forms are available for each learning topic, from Easy through Medium to Hard.
 - Each mock awards XP once on its first completion. Passing all five forms in a topic at 70% or higher unlocks that topic's badge and PNG/PDF certificate.
-- Camera-free proctoring uses fullscreen and page visibility when the browser supports them. Three warnings pause that learner profile on this browser for 24 hours.
-- Learner profiles and the 24-hour pause are stored locally in the browser. There is no account service, so the local pause does not provide server-enforced, cross-device account security.
+- Camera-free proctoring uses fullscreen and page visibility when the browser supports them. Three warnings create a Firestore-backed 24-hour profile lock for signed-in learners; profile writes are rejected by Firestore rules until the lock expires or an admin removes it.
+- Learner progress syncs to Firestore when connected, with local storage and Firestore offline cache supporting offline use. Google sign-in and server sync require internet access.
 
 ---
 
