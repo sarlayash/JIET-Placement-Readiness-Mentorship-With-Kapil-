@@ -112,37 +112,37 @@
         <span class="tab-icon">📖</span>
         <span class="tab-text">1. Concept Mastery</span>
       </button>
+      <button class="nav-tab" data-tab="tab-english">
+        <span class="tab-icon">🔤</span>
+        <span class="tab-text">2. English Mastery</span>
+      </button>
       <button class="nav-tab" data-tab="tab-drills">
         <span class="tab-icon">🎯</span>
-        <span class="tab-text">2. Proactive Drills</span>
+        <span class="tab-text">3. Proactive Drills</span>
       </button>
       <button class="nav-tab" data-tab="tab-sentences">
         <span class="tab-icon">✍️</span>
-        <span class="tab-text">3. Sentence Battles</span>
+        <span class="tab-text">4. Sentence Battles</span>
       </button>
       <button class="nav-tab" data-tab="tab-parajumbles">
         <span class="tab-icon">🧩</span>
-        <span class="tab-text">4. Para-Jumbles</span>
+        <span class="tab-text">5. Para-Jumbles</span>
       </button>
       <button class="nav-tab" data-tab="tab-cloze">
         <span class="tab-icon">🧪</span>
-        <span class="tab-text">5. Passage Cloze</span>
+        <span class="tab-text">6. Passage Cloze</span>
       </button>
       <button class="nav-tab" data-tab="tab-soft-skills">
         <span class="tab-icon">🤝</span>
-        <span class="tab-text">6. Soft Skills</span>
+        <span class="tab-text">7. Soft Skills</span>
       </button>
       <button class="nav-tab" data-tab="tab-communication">
         <span class="tab-icon">💬</span>
-        <span class="tab-text">7. Communication</span>
+        <span class="tab-text">8. Communication</span>
       </button>
       <button class="nav-tab" data-tab="tab-aptitude">
         <span class="tab-icon">🧠</span>
-        <span class="tab-text">8. Aptitude</span>
-      </button>
-      <button class="nav-tab" data-tab="tab-english">
-        <span class="tab-icon">🔤</span>
-        <span class="tab-text">9. English Mastery</span>
+        <span class="tab-text">9. Aptitude</span>
       </button>
       <button class="nav-tab certificate-tab-btn" data-tab="tab-certificate">
         <span class="tab-icon">🏆</span>
@@ -476,6 +476,9 @@
             </div>
           </div>
           <div class="topic-connections-grid">
+            <button class="topic-link-card" type="button" onclick="switchTab('tab-english')">
+              <span class="topic-link-icon">🔤</span><span class="topic-link-copy"><strong>Grammar + Usage → English Mastery</strong><small>Practice punctuation, parts of speech, collocations, and workplace English with timed tests.</small></span><span class="topic-link-arrow">→</span>
+            </button>
             <button class="topic-link-card" type="button" onclick="switchTab('tab-drills')">
               <span class="topic-link-icon">🚦</span><span class="topic-link-copy"><strong>Signposts → Prediction</strong><small>Use support and contrast clues in proactive blanks.</small></span><span class="topic-link-arrow">→</span>
             </button>
@@ -497,24 +500,49 @@
             <button class="topic-link-card" type="button" onclick="switchTab('tab-aptitude')">
               <span class="topic-link-icon">🧠</span><span class="topic-link-copy"><strong>Quant + Logic → Placement Aptitude</strong><small>Practice arithmetic, reasoning, data interpretation, and spatial skills.</small></span><span class="topic-link-arrow">→</span>
             </button>
-            <button class="topic-link-card" type="button" onclick="switchTab('tab-english')">
-              <span class="topic-link-icon">🔤</span><span class="topic-link-copy"><strong>Grammar + Usage → English Mastery</strong><small>Practice punctuation, parts of speech, collocations, and workplace English with timed tests.</small></span><span class="topic-link-arrow">→</span>
-            </button>
           </div>
         </section>
 
         <div class="action-footer-center">
-          <button class="btn btn-primary btn-lg" onclick="switchTab('tab-drills')">
-            <span>Proceed to Level 2: Proactive Drills</span>
+          <button class="btn btn-primary btn-lg" onclick="switchTab('tab-english')">
+            <span>Proceed to Level 2: English Mastery</span>
             <span class="btn-arrow">→</span>
           </button>
         </div>
       </section>
 
-      <!-- ================= LEVEL 2: PROACTIVE DRILLS ================= -->
+      <!-- ================= LEVEL 2: ENGLISH MASTERY ================= -->
+      <section id="tab-english" class="tab-pane">
+        <div class="section-header">
+          <div class="badge-chip">Level 2 • Professional English</div>
+          <h2>English Mastery for Placement Readiness</h2>
+          <p class="section-desc">Build confidence with eight focused topics. Each assessment has 50 multiple-choice questions, hints, solved workplace examples, and a 50-minute timer. Your active attempt saves locally and resumes offline.</p>
+        </div>
+        <div class="mentor-live-notes">
+          <div><span class="badge-chip">🗒️ Live Notes With Mentor Kapil</span><h3>Practical English for real placement rounds</h3><p>Pick a topic to review a quick mentor tip and a solved placement-oriented example before you begin.</p></div>
+        </div>
+        <nav id="englishTopicNav" class="english-topic-nav" aria-label="English Mastery topics"></nav>
+        <div id="englishTopicGrid" class="english-topic-grid"></div>
+        <section id="englishAssessmentPanel" class="career-assessment-panel english-assessment-panel hidden" aria-live="polite">
+          <div class="english-exam-topline"><div><span class="badge-chip" id="englishExamTopicChip">50 Questions</span><h3 id="englishExamTitle">English Assessment</h3></div><div class="english-timer" id="englishTimer" role="timer" aria-live="off">50:00</div></div>
+          <div class="english-exam-progress-row"><span id="englishQuestionPosition">Question 1 of 50</span><span id="englishAnsweredCount">0 answered</span></div>
+          <div class="english-exam-progress-track"><div id="englishExamProgressFill"></div></div>
+          <div id="englishQuestionMount"></div>
+          <div class="english-exam-controls">
+            <button type="button" class="btn btn-secondary" id="englishPreviousBtn" onclick="moveEnglishQuestion(-1)">← Previous</button>
+            <button type="button" class="btn btn-secondary" id="englishHintBtn" onclick="toggleEnglishHint()">💡 Show hint</button>
+            <button type="button" class="btn btn-primary" id="englishNextBtn" onclick="moveEnglishQuestion(1)">Next →</button>
+          </div>
+          <div class="english-exam-submit-row"><button type="button" class="btn btn-primary" id="englishSubmitBtn" onclick="submitEnglishAssessment()">Submit 50-question assessment</button></div>
+          <div id="englishAssessmentResult" class="english-result-panel hidden" aria-live="polite"></div>
+        </section>
+        <div class="action-footer-center english-next-step"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-drills')"><span>Proceed to Level 3: Proactive Drills</span><span class="btn-arrow">→</span></button><button class="btn btn-secondary" onclick="switchTab('tab-certificate')"><span>View Certificates</span><span class="btn-arrow">🏆</span></button></div>
+      </section>
+
+      <!-- ================= LEVEL 3: PROACTIVE DRILLS ================= -->
       <section id="tab-drills" class="tab-pane">
         <div class="section-header">
-          <div class="badge-chip">Level 2 • Practice Drills</div>
+          <div class="badge-chip">Level 3 • Practice Drills</div>
           <h2>Proactive Fill-in-the-Blanks & Grammar Analysis</h2>
           <p class="section-desc">Page 1 Worksheet Drills: Predict the words proactively, determine grammatical parts of speech, and reconstruct Rahul's day timeline.</p>
         <div class="section-why-callout">
@@ -582,16 +610,16 @@
 
         <div class="action-footer-center">
           <button class="btn btn-primary btn-lg" onclick="switchTab('tab-sentences')">
-            <span>Proceed to Level 3: Sentence Battles</span>
+            <span>Proceed to Level 4: Sentence Battles</span>
             <span class="btn-arrow">→</span>
           </button>
         </div>
       </section>
 
-      <!-- ================= LEVEL 3: SENTENCE BATTLES ================= -->
+      <!-- ================= LEVEL 4: SENTENCE BATTLES ================= -->
       <section id="tab-sentences" class="tab-pane">
         <div class="section-header">
-          <div class="badge-chip">Level 3 • Sentence Completion</div>
+          <div class="badge-chip">Level 4 • Sentence Completion</div>
           <h2>Sentence Completion Battle: Practice & Concept Review</h2>
           <p class="section-desc">Contains Page 1 Questions (1 to 4) + Page 2 Concept Review Questions (1 to 10). Master signposts, root words, and vocabulary.</p>
         <div class="section-why-callout">
@@ -631,16 +659,16 @@
 
         <div class="action-footer-center">
           <button class="btn btn-primary btn-lg" onclick="switchTab('tab-parajumbles')">
-            <span>Proceed to Level 4: Para-Jumble Arena</span>
+            <span>Proceed to Level 5: Para-Jumble Arena</span>
             <span class="btn-arrow">→</span>
           </button>
         </div>
       </section>
 
-      <!-- ================= LEVEL 4: PARA-JUMBLES ARENA ================= -->
+      <!-- ================= LEVEL 5: PARA-JUMBLES ARENA ================= -->
       <section id="tab-parajumbles" class="tab-pane">
         <div class="section-header">
-          <div class="badge-chip">Level 4 • Logical Discourse</div>
+          <div class="badge-chip">Level 5 • Logical Discourse</div>
           <h2>Para-Jumble Arena: Strategies & Advanced Permutations</h2>
           <p class="section-desc">Covers Page 1 Questions 1 to 5 (Arranging and identifying the exact strategy used) + Page 2 & 3 Questions 11 to 20.</p>
         <div class="section-why-callout">
@@ -682,16 +710,16 @@
 
         <div class="action-footer-center">
           <button class="btn btn-primary btn-lg" onclick="switchTab('tab-cloze')">
-            <span>Proceed to Level 5: Passage Cloze</span>
+            <span>Proceed to Level 6: Passage Cloze</span>
             <span class="btn-arrow">→</span>
           </button>
         </div>
       </section>
 
-      <!-- ================= LEVEL 5: PASSAGE CLOZE ================= -->
+      <!-- ================= LEVEL 6: PASSAGE CLOZE ================= -->
       <section id="tab-cloze" class="tab-pane">
         <div class="section-header">
-          <div class="badge-chip">Level 5 • Comprehensive Cloze Test</div>
+          <div class="badge-chip">Level 6 • Comprehensive Cloze Test</div>
           <h2>Passage Cloze Test: Logical Links in Connected Discourse</h2>
           <p class="section-desc">Page 3 Questions 21 to 25: Master cohesive ties, scientific terminology, and logical transitions.</p>
         <div class="section-why-callout">
@@ -725,16 +753,16 @@
 
         <div class="action-footer-center">
           <button class="btn btn-primary btn-lg" onclick="switchTab('tab-soft-skills')">
-            <span>Continue to Level 6: Soft Skills</span>
+            <span>Continue to Level 7: Soft Skills</span>
             <span class="btn-arrow">→</span>
           </button>
         </div>
       </section>
 
-      <!-- ================= LEVEL 6: SOFT SKILLS ================= -->
+      <!-- ================= LEVEL 7: SOFT SKILLS ================= -->
       <section id="tab-soft-skills" class="tab-pane">
         <div class="section-header">
-          <div class="badge-chip">Level 6 • Workplace Readiness</div>
+          <div class="badge-chip">Level 7 • Workplace Readiness</div>
           <h2>Soft Skills: Work Well With People and Change</h2>
           <p class="section-desc">Practice the behaviors employers look for in interviews and on the job: teamwork, ownership, adaptability, feedback, time management, ethics, and professional judgment.</p>
         </div>
@@ -750,13 +778,13 @@
           <div class="quiz-items-container" id="softSkillsAssessmentContainer"></div>
           <button class="btn btn-primary career-certificate-btn" id="softSkillsCertificateBtn" type="button" disabled onclick="downloadTrackCertificate('softSkills')">Answer every question and score at least 70% to unlock</button>
         </div>
-        <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-communication')"><span>Continue to Level 7: Professional Communication</span><span class="btn-arrow">→</span></button></div>
+        <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-communication')"><span>Continue to Level 8: Professional Communication</span><span class="btn-arrow">→</span></button></div>
       </section>
 
-      <!-- ================= LEVEL 7: PROFESSIONAL COMMUNICATION ================= -->
+      <!-- ================= LEVEL 8: PROFESSIONAL COMMUNICATION ================= -->
       <section id="tab-communication" class="tab-pane">
         <div class="section-header">
-          <div class="badge-chip">Level 7 • Communication Skills</div>
+          <div class="badge-chip">Level 8 • Communication Skills</div>
           <h2>Communicate Clearly at Work</h2>
           <p class="section-desc">Strengthen listening, professional email, concise speaking, presentations, meeting participation, audience awareness, and difficult conversations.</p>
         </div>
@@ -772,13 +800,13 @@
           <div class="quiz-items-container" id="communicationAssessmentContainer"></div>
           <button class="btn btn-primary career-certificate-btn" id="communicationCertificateBtn" type="button" disabled onclick="downloadTrackCertificate('communication')">Answer every question and score at least 70% to unlock</button>
         </div>
-        <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-aptitude')"><span>Continue to Level 8: Placement Aptitude</span><span class="btn-arrow">→</span></button></div>
+        <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-aptitude')"><span>Continue to Level 9: Placement Aptitude</span><span class="btn-arrow">→</span></button></div>
       </section>
 
-      <!-- ================= LEVEL 8: COMPREHENSIVE APTITUDE ================= -->
+      <!-- ================= LEVEL 9: COMPREHENSIVE APTITUDE ================= -->
       <section id="tab-aptitude" class="tab-pane">
         <div class="section-header">
-          <div class="badge-chip">Level 8 • Placement Aptitude</div>
+          <div class="badge-chip">Level 9 • Placement Aptitude</div>
           <h2>Placement Aptitude: Quantitative, Logical & Analytical Reasoning</h2>
           <p class="section-desc">A broad placement-preparation set covering arithmetic, number systems, algebra, percentages, ratios, averages, commercial math, work and speed, probability, logical reasoning, data interpretation, and spatial aptitude. Your existing Sentence Battles, Para-Jumbles, and Cloze modules cover verbal aptitude.</p>
         </div>
@@ -811,33 +839,6 @@
           <button class="btn btn-primary career-certificate-btn" id="aptitudeCertificateBtn" type="button" disabled onclick="downloadTrackCertificate('aptitude')">Answer every question and score at least 70% to unlock</button>
         </div>
         <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-certificate')"><span>View Your Career Readiness Certificates</span><span class="btn-arrow">🏆</span></button></div>
-      </section>
-
-      <!-- ================= LEVEL 9: ENGLISH MASTERY ================= -->
-      <section id="tab-english" class="tab-pane">
-        <div class="section-header">
-          <div class="badge-chip">Level 9 • Professional English</div>
-          <h2>English Mastery for Placement Readiness</h2>
-          <p class="section-desc">Build confidence with eight focused topics. Each assessment has 50 multiple-choice questions, hints, solved workplace examples, and a 50-minute timer. Your active attempt saves locally and resumes offline.</p>
-        </div>
-        <div class="mentor-live-notes">
-          <div><span class="badge-chip">🗒️ Live Notes With Mentor Kapil</span><h3>Practical English for real placement rounds</h3><p>Pick a topic to review a quick mentor tip and a solved placement-oriented example before you begin.</p></div>
-        </div>
-        <div id="englishTopicGrid" class="english-topic-grid"></div>
-        <section id="englishAssessmentPanel" class="career-assessment-panel english-assessment-panel hidden" aria-live="polite">
-          <div class="english-exam-topline"><div><span class="badge-chip" id="englishExamTopicChip">50 Questions</span><h3 id="englishExamTitle">English Assessment</h3></div><div class="english-timer" id="englishTimer" role="timer" aria-live="off">50:00</div></div>
-          <div class="english-exam-progress-row"><span id="englishQuestionPosition">Question 1 of 50</span><span id="englishAnsweredCount">0 answered</span></div>
-          <div class="english-exam-progress-track"><div id="englishExamProgressFill"></div></div>
-          <div id="englishQuestionMount"></div>
-          <div class="english-exam-controls">
-            <button type="button" class="btn btn-secondary" id="englishPreviousBtn" onclick="moveEnglishQuestion(-1)">← Previous</button>
-            <button type="button" class="btn btn-secondary" id="englishHintBtn" onclick="toggleEnglishHint()">💡 Show hint</button>
-            <button type="button" class="btn btn-primary" id="englishNextBtn" onclick="moveEnglishQuestion(1)">Next →</button>
-          </div>
-          <div class="english-exam-submit-row"><button type="button" class="btn btn-primary" id="englishSubmitBtn" onclick="submitEnglishAssessment()">Submit 50-question assessment</button></div>
-          <div id="englishAssessmentResult" class="english-result-panel hidden" aria-live="polite"></div>
-        </section>
-        <div class="action-footer-center"><button class="btn btn-primary btn-lg" onclick="switchTab('tab-certificate')"><span>View Your Certificates</span><span class="btn-arrow">🏆</span></button></div>
       </section>
 
       <!-- ================= LEVEL 10: CERTIFICATES ================= -->
@@ -955,6 +956,10 @@
         <span class="m-icon">📖</span>
         <span class="m-label">Concepts</span>
       </button>
+      <button class="mobile-nav-btn" data-tab="tab-english">
+        <span class="m-icon">🔤</span>
+        <span class="m-label">English</span>
+      </button>
       <button class="mobile-nav-btn" data-tab="tab-drills">
         <span class="m-icon">🎯</span>
         <span class="m-label">Drills</span>
@@ -982,10 +987,6 @@
       <button class="mobile-nav-btn" data-tab="tab-aptitude">
         <span class="m-icon">🧠</span>
         <span class="m-label">Aptitude</span>
-      </button>
-      <button class="mobile-nav-btn" data-tab="tab-english">
-        <span class="m-icon">🔤</span>
-        <span class="m-label">English</span>
       </button>
       <button class="mobile-nav-btn" data-tab="tab-certificate">
         <span class="m-icon">🏆</span>

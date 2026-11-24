@@ -1214,13 +1214,16 @@ function escapeEnglishHTML(value) {
 
 function renderEnglishTopicCards() {
   const grid = document.getElementById('englishTopicGrid');
-  if (!grid) return;
+  const topicNav = document.getElementById('englishTopicNav');
+  if (!grid || !topicNav) return;
   grid.innerHTML = '';
+  topicNav.innerHTML = '';
   ENGLISH_TOPICS.forEach(topic => {
     const previous = state.englishAssessments[topic.id];
     const active = state.activeEnglishAssessment?.topicId === topic.id;
     const article = document.createElement('article');
     article.className = 'english-topic-card';
+    article.id = `english-topic-${topic.id}`;
     article.innerHTML = `
       <div class="english-topic-card-title"><span>${escapeEnglishHTML(topic.icon)}</span><div><h3>${escapeEnglishHTML(topic.title)}</h3><span class="badge-chip">50 MCQs · 50 min</span></div></div>
       <p>${escapeEnglishHTML(topic.description)}</p>
@@ -1232,7 +1235,22 @@ function renderEnglishTopicCards() {
       <div class="english-topic-actions"><button type="button" class="btn btn-primary" onclick="startEnglishAssessment('${topic.id}')">${active ? '▶ Resume assessment' : previous ? '↻ Retake assessment' : '▶ Start assessment'}</button>${previous?.bestPercent >= 70 ? `<button type="button" class="btn btn-secondary" onclick="downloadEnglishCertificate('${topic.id}')">📜 Certificate</button>` : ''}</div>
     `;
     grid.appendChild(article);
+
+    const navButton = document.createElement('button');
+    navButton.type = 'button';
+    navButton.className = 'english-topic-nav-btn';
+    navButton.textContent = topic.title;
+    navButton.setAttribute('aria-label', `Jump to ${topic.title}`);
+    navButton.addEventListener('click', () => scrollToEnglishTopic(topic.id));
+    topicNav.appendChild(navButton);
   });
+}
+
+function scrollToEnglishTopic(topicId) {
+  const topicCard = document.getElementById(`english-topic-${topicId}`);
+  if (!topicCard) return;
+  if (!document.getElementById('tab-english').classList.contains('active')) switchTab('tab-english');
+  topicCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function startEnglishAssessment(topicId) {
@@ -1923,6 +1941,19 @@ function focusCloze(blankNum) {
 // ==========================================
 // 7. TAB & MOBILE NAVIGATION
 // ==========================================
+function revealActiveNavItem(containerSelector, tabId) {
+  const container = document.querySelector(containerSelector);
+  const activeItem = container?.querySelector(`[data-tab="${tabId}"]`);
+  if (!container || !activeItem) return;
+  const containerRect = container.getBoundingClientRect();
+  const itemRect = activeItem.getBoundingClientRect();
+  if (itemRect.left < containerRect.left) {
+    container.scrollBy({ left: itemRect.left - containerRect.left - 12, behavior: 'smooth' });
+  } else if (itemRect.right > containerRect.right) {
+    container.scrollBy({ left: itemRect.right - containerRect.right + 12, behavior: 'smooth' });
+  }
+}
+
 function switchTab(tabId) {
   if (!document.getElementById(tabId)?.classList.contains('tab-pane')) return;
   state.activeTab = tabId;
@@ -1944,6 +1975,8 @@ function switchTab(tabId) {
     b.setAttribute('aria-current', b.dataset.tab === tabId ? 'page' : 'false');
   });
 
+  revealActiveNavItem('.level-nav-bar', tabId);
+  revealActiveNavItem('.mobile-bottom-nav', tabId);
   persistState();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
