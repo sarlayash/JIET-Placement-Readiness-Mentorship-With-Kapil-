@@ -1,9 +1,10 @@
-const CACHE_NAME = 'jiet-kapil-placement-v8';
+const CACHE_NAME = 'jiet-kapil-placement-v9';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './firebase-auth.js',
   './career-curriculum.js',
   './english-curriculum.js',
   './manifest.json',
@@ -38,6 +39,20 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const requestUrl = new URL(request.url);
+  if (requestUrl.origin === 'https://www.gstatic.com' && requestUrl.pathname.startsWith('/firebasejs/13.4.0/')) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response.ok) {
+          try { await cache.put(request, response.clone()); } catch (error) { /* Continue with network response. */ }
+        }
+        return response;
+      })
+    );
+    return;
+  }
   if (requestUrl.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {

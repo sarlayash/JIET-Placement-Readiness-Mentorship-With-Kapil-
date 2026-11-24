@@ -39,7 +39,7 @@ function loadApp() {
   const scripts = ['career-curriculum.js', 'english-curriculum.js', 'app.js']
     .map(file => fs.readFileSync(path.join(root, file), 'utf8'))
     .join('\n');
-  vm.runInContext(`${scripts}\nglobalThis.__testApi = { state, BADGES_CONFIG, LEVEL_BADGES, CAREER_ASSESSMENTS, FOUNDATION_ASSESSMENT, PROACTIVE_DRILLS, POS_DRILLS, SENTENCE_PAGE_1, SENTENCE_PAGE_2, PARAJUMBLES_PAGE_1, PARAJUMBLES_PAGE_2_3, CLOZE_QUESTIONS, APTITUDE_QUESTIONS, ENGLISH_TOPICS, MOCK_TOPICS, MOCK_DIFFICULTIES, getMockQuestions, getMockOptions, getLearningLevelProgress, getNewLevelBadges, areAllLearningLevelsComplete, recordProctorViolation, resetProctorDebounce() { lastProctorViolationAt = 0; }, imageCanvasToPdfBlob, downloadCanvasArtifact, downloadTrackCertificate, downloadEnglishCertificate, downloadCertificatePNG }; globalThis.__testApi.__context = globalThis;`, context, { filename: 'app-test.vm.js' });
+  vm.runInContext(`${scripts}\nglobalThis.__testApi = { state, BADGES_CONFIG, LEVEL_BADGES, CAREER_ASSESSMENTS, FOUNDATION_ASSESSMENT, PROACTIVE_DRILLS, POS_DRILLS, SENTENCE_PAGE_1, SENTENCE_PAGE_2, PARAJUMBLES_PAGE_1, PARAJUMBLES_PAGE_2_3, CLOZE_QUESTIONS, APTITUDE_QUESTIONS, ENGLISH_TOPICS, MOCK_TOPICS, MOCK_DIFFICULTIES, getMockQuestions, getMockOptions, loadSavedState, getActiveProfileId: () => activeProfileId, getLearningLevelProgress, getNewLevelBadges, areAllLearningLevelsComplete, recordProctorViolation, resetProctorDebounce() { lastProctorViolationAt = 0; }, imageCanvasToPdfBlob, downloadCanvasArtifact, downloadTrackCertificate, downloadEnglishCertificate, downloadCertificatePNG }; globalThis.__testApi.__context = globalThis;`, context, { filename: 'app-test.vm.js' });
   return context.__testApi;
 }
 
@@ -115,6 +115,27 @@ test('Mock Center is reachable from both navigation bars with unique page IDs', 
   assert.match(html, /class="mobile-nav-btn" data-tab="tab-mock-center"/);
   assert.match(html, /id="tab-mock-center" class="tab-pane"/);
   assert.match(html, /id="proctorLockOverlay"/);
+});
+
+test('Google authentication is the app entry point and uses the supplied Firebase project', () => {
+  const html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
+  const authModule = fs.readFileSync(path.join(process.cwd(), 'firebase-auth.js'), 'utf8');
+  assert.match(html, /id="authGateOverlay"/);
+  assert.match(html, /id="googleSignInBtn"[^>]*onclick="signInWithGoogle\(\)"/);
+  assert.doesNotMatch(html, /id="learnerInputName"/);
+  assert.match(authModule, /projectId: 'picture-connect-with-kapil'/);
+  assert.match(authModule, /signInWithPopup\(auth, provider\)/);
+  assert.match(authModule, /browserLocalPersistence/);
+});
+
+test('saved learner profiles are isolated by Firebase UID even when names match', () => {
+  const api = loadApp();
+  api.loadSavedState({ uid: 'google-user-one', displayName: 'Alex Student' });
+  assert.equal(api.getActiveProfileId(), 'google:google-user-one');
+  api.state.xp = 525;
+  api.loadSavedState({ uid: 'google-user-two', displayName: 'Alex Student' });
+  assert.equal(api.getActiveProfileId(), 'google:google-user-two');
+  assert.equal(api.state.xp, 0);
 });
 
 test('three proctor warnings suspend the active learner profile for 24 hours', () => {

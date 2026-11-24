@@ -16,7 +16,12 @@
 ### 📱 Install as Mobile App (PWA)
 - **Android / Chrome / Edge:** Open the web app and tap the **"📲 Install App"** button in the header or your browser menu.
 - **iOS / Safari:** Tap the **Share** button `⎋`, then select **"Add to Home Screen"** `➕`.
-- After the app shell loads once online, the complete curriculum, styles, scripts, and local images are cached for offline use. Google Fonts still require an internet connection; system fonts are used when they are unavailable.
+- After the app shell and Firebase SDK load once online, the curriculum, styles, scripts, and local images are cached for offline use. Google OAuth sign-in requires an internet connection. Google Fonts also require internet; system fonts are used when unavailable.
+- Sign in with Google to open a learner profile. Assessment progress remains local to that browser and is keyed to the Firebase user ID; it is not synced to Firestore.
+
+### Enable Google Authentication
+
+In Firebase Console for project `picture-connect-with-kapil`, enable **Authentication → Sign-in method → Google** and add `sarlayash.github.io` under **Authentication → Settings → Authorized domains**. `localhost` can be used for local development. Firebase Authentication handles sign-up automatically the first time a learner continues with Google.
 
 ---
 

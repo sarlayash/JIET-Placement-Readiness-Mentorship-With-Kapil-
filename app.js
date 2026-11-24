@@ -33,6 +33,9 @@ const ACTIVE_PROFILE_STORAGE_KEY = 'faceprep_kapil_active_profile';
 let learnerProfiles = {};
 let activeProfileId = null;
 let lastLevelCompletionKey = null;
+let authUser = null;
+let appInitialized = false;
+let pendingFirebaseUser = null;
 
 const LEVEL_BADGES = [
   { id: 'level_foundations', icon: '📖', title: 'Foundation Builder', desc: 'Passed Level 1 Foundations with at least 70%.' },
@@ -1200,7 +1203,7 @@ function applyLearnerState(data, fallbackName) {
   state.activeTab = safeData.activeTab;
 }
 
-function loadSavedState() {
+function loadSavedState(authenticatedUser = null) {
   try {
     const savedProfiles = JSON.parse(localStorage.getItem(PROFILES_STORAGE_KEY) || '{}');
     learnerProfiles = savedProfiles && typeof savedProfiles === 'object' && !Array.isArray(savedProfiles)
@@ -1220,25 +1223,45 @@ function loadSavedState() {
       }
     }
 
-    const storedActiveProfileId = localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY);
-    const isValidProfileId = (id) => id && learnerProfiles[id] && normalizeProfileId(
-      typeof learnerProfiles[id].learnerName === 'string' ? learnerProfiles[id].learnerName : ''
-    ) === id;
-    const profileId = storedActiveProfileId === ''
-      ? null
-      : isValidProfileId(storedActiveProfileId) ? storedActiveProfileId
-      : isValidProfileId(migratedProfileId) ? migratedProfileId
-      : Object.keys(learnerProfiles).find(isValidProfileId);
-    if (profileId) {
-      activeProfileId = profileId;
-      learnerProfiles[profileId] = sanitizeLearnerState(learnerProfiles[profileId]);
-      applyLearnerState(learnerProfiles[profileId]);
+    if (authenticatedUser?.uid) {
+      activeProfileId = `google:${authenticatedUser.uid}`;
+      if (learnerProfiles[activeProfileId]) {
+        learnerProfiles[activeProfileId] = sanitizeLearnerState(learnerProfiles[activeProfileId], authenticatedUser.displayName);
+        applyLearnerState(learnerProfiles[activeProfileId], authenticatedUser.displayName);
+      } else {
+        const matchingLocalId = normalizeProfileId(authenticatedUser.displayName || '');
+        const matchingLocalProfile = matchingLocalId && learnerProfiles[matchingLocalId];
+        if (matchingLocalProfile && confirm(`We found progress saved on this device for “${authenticatedUser.displayName}”. Import it into this Google profile? This only copies this browser's local progress.`)) {
+          learnerProfiles[activeProfileId] = sanitizeLearnerState(matchingLocalProfile, authenticatedUser.displayName);
+          applyLearnerState(learnerProfiles[activeProfileId], authenticatedUser.displayName);
+        } else {
+          createFreshLearnerState(authenticatedUser.displayName || 'Learner');
+          learnerProfiles[activeProfileId] = {};
+        }
+      }
       localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(learnerProfiles));
-      localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, profileId);
+      localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, activeProfileId);
     } else {
-      activeProfileId = null;
-      createFreshLearnerState();
-      if (storedActiveProfileId === null) localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, '');
+      const storedActiveProfileId = localStorage.getItem(ACTIVE_PROFILE_STORAGE_KEY);
+      const isValidProfileId = (id) => id && learnerProfiles[id] && normalizeProfileId(
+        typeof learnerProfiles[id].learnerName === 'string' ? learnerProfiles[id].learnerName : ''
+      ) === id;
+      const profileId = storedActiveProfileId === ''
+        ? null
+        : isValidProfileId(storedActiveProfileId) ? storedActiveProfileId
+        : isValidProfileId(migratedProfileId) ? migratedProfileId
+        : Object.keys(learnerProfiles).find(isValidProfileId);
+      if (profileId) {
+        activeProfileId = profileId;
+        learnerProfiles[profileId] = sanitizeLearnerState(learnerProfiles[profileId]);
+        applyLearnerState(learnerProfiles[profileId]);
+        localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(learnerProfiles));
+        localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, profileId);
+      } else {
+        activeProfileId = null;
+        createFreshLearnerState();
+        if (storedActiveProfileId === null) localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, '');
+      }
     }
 
     if (migratedLegacyState) {
@@ -1248,8 +1271,8 @@ function loadSavedState() {
   } catch (e) {
     console.error('Failed to load state from localStorage', e);
     learnerProfiles = {};
-    activeProfileId = null;
-    createFreshLearnerState();
+    activeProfileId = authenticatedUser?.uid ? `google:${authenticatedUser.uid}` : null;
+    createFreshLearnerState(authenticatedUser?.displayName || 'Learner');
   }
 }
 
@@ -2537,31 +2560,81 @@ function switchTab(tabId) {
 // 8. ONBOARDING & CERTIFICATE MANAGEMENT
 // ==========================================
 function startJourney() {
-  const input = document.getElementById('learnerInputName');
-  const name = input ? input.value.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
-  if (!name) {
-    alert('Please enter your full name to proceed with your certification.');
+  return signInWithGoogle();
+}
+
+async function signInWithGoogle() {
+  const button = document.getElementById('googleSignInBtn');
+  const status = document.getElementById('authGateStatus');
+  if (!window.firebaseSignInWithGoogle) {
+    if (status) status.textContent = 'Google sign-in is not ready. Check your connection and reload the app.';
     return;
   }
-  const profileId = normalizeProfileId(name);
-  const savedProfile = learnerProfiles[profileId];
-  if (savedProfile) applyLearnerState(savedProfile, name);
-  else createFreshLearnerState(name);
-  activeProfileId = profileId;
-  state.learnerName = name;
-  if (!state.certificateId) state.certificateId = generateCertificateId();
-  const certInput = document.getElementById('certCustomName');
-  if (certInput) certInput.value = name;
-  renderAllQuestionSets();
-  switchTab(state.activeTab);
-  updateHUD();
-  persistState();
-
-  const modal = document.getElementById('onboardingModal');
-  if (modal) modal.classList.add('hidden');
-  sfx.playCorrect();
-  showToast(`Welcome, ${name}! Your Mentorship with Kapil has started! 🚀`);
+  if (button) button.disabled = true;
+  if (status) status.textContent = 'Connecting securely to Google…';
+  try {
+    await window.firebaseSignInWithGoogle();
+  } catch (error) {
+    handleFirebaseAuthError(error);
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
+
+function handleFirebaseAuthError(error) {
+  const status = document.getElementById('authGateStatus');
+  const button = document.getElementById('googleSignInBtn');
+  const code = error?.code || '';
+  const messages = {
+    'auth/unauthorized-domain': 'This app domain must be added in Firebase Console → Authentication → Settings → Authorized domains.',
+    'auth/popup-closed-by-user': 'Google sign-in was cancelled. You can try again whenever you’re ready.',
+    'auth/popup-blocked': 'Your browser blocked the Google sign-in window. Allow popups for this site and try again.',
+    'auth/sdk-load-failed': 'Firebase could not load. Check your connection and reload the app.',
+    'auth/operation-not-allowed': 'Google sign-in is not enabled for this Firebase project yet.'
+  };
+  if (status) status.textContent = messages[code] || 'Google sign-in failed. Check your connection or Firebase Authentication settings, then try again.';
+  if (button) button.disabled = false;
+  if (code !== 'auth/popup-closed-by-user') console.error('Firebase Authentication error:', code, error?.message || error);
+}
+
+function handleFirebaseAuthState(user) {
+  pendingFirebaseUser = user;
+  if (!appInitialized) return;
+  const gate = document.getElementById('authGateOverlay');
+  if (!user) {
+    authUser = null;
+    if (gate) gate.classList.remove('hidden');
+    const status = document.getElementById('authGateStatus');
+    if (status) status.textContent = 'New learners are registered automatically with Google.';
+    return;
+  }
+
+  const previousUid = authUser?.uid;
+  authUser = user;
+  loadSavedState(user);
+  renderAllQuestionSets();
+  renderMockCenter();
+  switchTab(state.activeTab);
+  const certificateName = document.getElementById('certCustomName');
+  if (certificateName && !certificateName.value) certificateName.value = state.learnerName;
+  const emailLabel = document.getElementById('profileModalEmail');
+  if (emailLabel) emailLabel.textContent = user.email || 'Google account';
+  if (gate) gate.classList.add('hidden');
+  updateHUD();
+  renderProctorLockScreen();
+  persistState();
+  if (previousUid !== user.uid) {
+    sfx.playCorrect();
+    showToast(`Signed in as ${user.displayName}. Your learner profile is ready.`);
+  }
+}
+
+function handleFirebaseSignOutError(error) {
+  handleFirebaseAuthError(error);
+}
+
+window.handleFirebaseAuthState = handleFirebaseAuthState;
+window.handleFirebaseAuthError = handleFirebaseAuthError;
 
 function updateCertName(newName) {
   const certName = document.getElementById('certRecipientName');
@@ -2837,13 +2910,6 @@ function saveNewNameFromProfile() {
   const input = document.getElementById('profileInputRename');
   const val = input ? input.value.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
   if (val) {
-    const newProfileId = normalizeProfileId(val);
-    if (newProfileId !== activeProfileId && learnerProfiles[newProfileId]) {
-      showToast('A learner profile with that name already exists. Please choose another name.');
-      return;
-    }
-    if (activeProfileId && activeProfileId !== newProfileId) delete learnerProfiles[activeProfileId];
-    activeProfileId = newProfileId;
     state.learnerName = val;
     const certInput = document.getElementById('certCustomName');
     if (certInput) certInput.value = val;
@@ -2856,48 +2922,32 @@ function saveNewNameFromProfile() {
   }
 }
 
-function handleLogoff() {
+async function handleLogoff() {
   if (state.activeMockAssessment || state.proctorLockUntil > Date.now()) {
     showToast('You cannot log off during a proctored mock or 24-hour profile lock.');
     return;
   }
-  if (confirm('Are you sure you want to log off? You can switch to another learner.')) {
+  if (confirm('Sign out of your Google account on this device? Your progress will remain saved locally to this Google profile.')) {
     persistState();
     closeProfileModal();
-    activeProfileId = null;
-    createFreshLearnerState();
-    try { localStorage.setItem(ACTIVE_PROFILE_STORAGE_KEY, ''); } catch (e) {}
-    const certInput = document.getElementById('certCustomName');
-    if (certInput) certInput.value = '';
-    renderAllQuestionSets();
-    switchTab('tab-concepts');
-    updateHUD();
-
-    // Show onboarding modal for new user
-    const onboarding = document.getElementById('onboardingModal');
-    if (onboarding) {
-      document.getElementById('learnerInputName').value = '';
-      onboarding.classList.remove('hidden');
+    try {
+      await window.firebaseSignOut?.();
+    } catch (error) {
+      handleFirebaseSignOutError(error);
     }
-    showToast('Logged off successfully. Welcome a new learner! 👋');
   }
 }
 
 function handleResetProfile() {
   if (confirm('⚠️ DANGER: Are you sure you want to completely RESET all your profile progress, earned XP, and unlocked badges? This action cannot be undone.')) {
-    try {
-      localStorage.removeItem(LEGACY_STATE_KEY);
-      localStorage.removeItem(PROFILES_STORAGE_KEY);
-      localStorage.removeItem(ACTIVE_PROFILE_STORAGE_KEY);
-    } catch(e) {}
-    learnerProfiles = {};
-    activeProfileId = null;
-    createFreshLearnerState();
-
-    showToast('Profile & progress reset completely! Restarting...');
-    setTimeout(() => {
-      window.location.reload();
-    }, 600);
+    if (activeProfileId) delete learnerProfiles[activeProfileId];
+    createFreshLearnerState(authUser?.displayName || 'Learner');
+    renderAllQuestionSets();
+    renderMockCenter();
+    switchTab('tab-concepts');
+    updateHUD();
+    persistState();
+    showToast('Your Google profile progress has been reset.');
   }
 }
 
@@ -2963,15 +3013,8 @@ function triggerConfetti(durationSeconds = 1.5) {
 // 11. INITIALIZATION & EVENT LISTENERS
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  loadSavedState();
   renderMockCenter();
   renderProctorLockScreen();
-
-  // If learner has previously set a name, hide onboarding modal
-  if (state.learnerName && state.learnerName !== 'Learner') {
-    const onboarding = document.getElementById('onboardingModal');
-    if (onboarding) onboarding.classList.add('hidden');
-  }
 
   renderAllQuestionSets();
   switchTab(state.activeTab);
@@ -2991,13 +3034,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  const learnerInput = document.getElementById('learnerInputName');
-  if (learnerInput) learnerInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') startJourney();
-  });
-
   document.addEventListener('keydown', (event) => {
-    const openModal = ['badgesModal', 'profileModal', 'onboardingModal']
+    const openModal = ['badgesModal', 'profileModal', 'authGateOverlay']
       .map(id => document.getElementById(id))
       .find(modal => modal && !modal.classList.contains('hidden'));
     if (!openModal) return;
@@ -3102,6 +3140,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   updateHUD();
+  appInitialized = true;
+  handleFirebaseAuthState(pendingFirebaseUser);
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && state.activeMockAssessment) recordProctorViolation('switching away from the exam tab');

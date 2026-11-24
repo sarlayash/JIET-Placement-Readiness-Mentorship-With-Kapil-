@@ -1053,26 +1053,18 @@
       </div>
     </div>
 
-    <!-- Onboarding Name Modal -->
-    <div id="onboardingModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
-      <div class="modal-card onboarding-card">
-        <div class="onboarding-avatar-wrap">
-          <img src="assets/kapil_avatar.png" alt="Kapil Mentor" class="onboarding-avatar">
-          <div class="welcome-speech-bubble">
-            <strong id="onboardingTitle">Welcome to Placement Readiness Mentorship!</strong>
-            <p>I am Kapil. Welcome to Placement Readiness Mentorship Powered By FACE Prep. Let's begin your placement journey!</p>
-          </div>
-        </div>
-
-        <div class="onboarding-form">
-          <label for="learnerInputName" class="form-label">Enter Your Full Name for Certifications & Rewards:</label>
-          <input type="text" id="learnerInputName" class="form-input" maxlength="80" autocomplete="name" placeholder="e.g. Rahul Sharma" autofocus>
-          <button class="btn btn-primary btn-block btn-lg" onclick="startJourney()">
-            <span>Begin Placement Mentorship</span>
-            <span>⚡</span>
-          </button>
-        </div>
-      </div>
+    <div id="authGateOverlay" class="auth-gate-overlay" role="dialog" aria-modal="true" aria-labelledby="authGateTitle">
+      <section class="auth-gate-card">
+        <img src="assets/kapil_avatar.png" alt="Mentor Kapil" class="onboarding-avatar">
+        <span class="badge-chip">JIET Placement Readiness</span>
+        <h2 id="authGateTitle">Sign in to continue</h2>
+        <p>Your Google account securely identifies your learner profile and keeps progress separate from other learners on this device.</p>
+        <button id="googleSignInBtn" class="btn btn-primary btn-block btn-lg google-sign-in-btn" type="button" onclick="signInWithGoogle()">
+          <span class="google-mark" aria-hidden="true">G</span><span>Continue with Google</span>
+        </button>
+        <p id="authGateStatus" class="auth-gate-status" role="status" aria-live="polite">New learners are registered automatically with Google.</p>
+        <small>Placement progress is saved locally in this browser. Google authentication does not upload it to Firebase.</small>
+      </section>
     </div>
 
     <!-- Profile & Settings Modal (Log Off & Reset) -->
@@ -1091,7 +1083,7 @@
             <img src="assets/kapil_avatar.png" alt="Avatar" class="profile-modal-avatar">
             <div class="profile-summary-details">
               <h4 id="profileModalName">Learner</h4>
-              <p>JIET Placement Mentorship with Kapil • FACE Prep</p>
+              <p id="profileModalEmail">Google account • JIET Placement Mentorship with Kapil</p>
               <div class="profile-stats-row">
                 <span class="profile-stat-badge" id="profileStatXP">⚡ 0 XP</span>
                 <span class="profile-stat-badge" id="profileStatLevel">⭐ Level 1</span>
@@ -1114,7 +1106,7 @@
             <h4>Account & Session Controls</h4>
             <div class="profile-btns-col">
               <button class="btn btn-secondary btn-block logoff-btn" onclick="handleLogoff()">
-                <span>🚪 Log Off (Switch Learner)</span>
+                <span>🚪 Sign out of Google</span>
               </button>
               <button class="btn btn-block reset-btn" onclick="handleResetProfile()">
                 <span>⚠️ Reset All Profile & Test Progress</span>
@@ -1142,5 +1134,6 @@
   <script src="career-curriculum.js"></script>
   <script src="english-curriculum.js"></script>
   <script src="app.js"></script>
+  <script type="module" src="firebase-auth.js" onerror="handleFirebaseAuthError({code: 'auth/sdk-load-failed'})"></script>
 </body>
 </html>
