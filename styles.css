@@ -2492,6 +2492,18 @@ body {
 .google-mark { display: grid; width: 23px; height: 23px; place-items: center; border-radius: 50%; color: #4285F4; background: #fff; font: 900 0.95rem Arial, sans-serif; }
 .google-sign-in-btn:disabled { cursor: wait; opacity: 0.68; }
 .cloud-sync-status { color: #64748B !important; font-size: 0.72rem !important; }
+.hero-admin-link {
+  margin-top: 1rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(255, 85, 0, 0.28);
+  border-radius: 12px;
+  background: rgba(255, 85, 0, 0.08);
+  color: #c2410c;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.hero-admin-link:hover { background: rgba(255, 85, 0, 0.14); }
 .admin-dashboard-toolbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
 .admin-dashboard-status-row { display: grid; grid-template-columns: 1fr minmax(220px, 340px); align-items: center; gap: 10px 18px; margin: 18px 0 12px; }
 .admin-dashboard-status-row p { margin: 0; color: #475569; font-size: 0.82rem; }
