@@ -2527,11 +2527,24 @@ body {
 .admin-dashboard-status-row label { grid-column: 2; grid-row: 1; color: #475569; font-size: 0.76rem; font-weight: 800; }
 .admin-dashboard-status-row input { grid-column: 2; grid-row: 2; }
 .admin-table-wrap { overflow: auto; border: 1px solid #E2E8F0; border-radius: var(--radius-lg); background: #fff; box-shadow: var(--shadow-sm); }
-.admin-learner-table { width: 100%; min-width: 980px; border-collapse: collapse; }
+.admin-learner-table { width: 100%; min-width: 1540px; border-collapse: collapse; }
 .admin-learner-table th, .admin-learner-table td { padding: 11px 12px; border-bottom: 1px solid #E2E8F0; color: #334155; font-size: 0.76rem; text-align: left; vertical-align: middle; }
 .admin-learner-table th { position: sticky; top: 0; z-index: 1; color: #475569; background: #F8FAFC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .admin-learner-table td small { display: block; margin-top: 3px; color: #64748B; font-size: 0.66rem; }
 .admin-learner-table .btn { min-height: 32px; padding: 6px 10px; font-size: 0.7rem; white-space: nowrap; }
+.admin-presence { display: inline-flex; align-items: center; gap: 5px; font-size: 0.73rem; font-weight: 850; white-space: nowrap; }
+.admin-presence.online { color: #047857; }
+.admin-presence.offline { color: #64748B; }
+.admin-activity-note { margin: 0 0 10px; color: #64748B; font-size: 0.76rem; line-height: 1.45; }
+.admin-progress-details { min-width: 300px; max-width: 460px; }
+.admin-progress-details summary { color: #9A3412; font-weight: 800; cursor: pointer; }
+.admin-progress-details > strong { display: block; margin-top: 10px; color: #334155; font-size: 0.72rem; }
+.admin-progress-details > ul { display: grid; gap: 4px; margin: 4px 0; padding: 0; list-style: none; }
+.admin-progress-details > ul li { display: flex; gap: 7px; color: #64748B; font-size: 0.69rem; }
+.admin-progress-details > ul li.done { color: #475569; }
+.admin-progress-details > ul li > span:first-child { flex: 0 0 14px; font-weight: 900; }
+.admin-progress-details > ul strong, .admin-progress-details > ul small { display: block; }
+.admin-progress-details > ul small { color: #64748B; }
 @media (max-width: 640px) { .admin-dashboard-status-row { grid-template-columns: 1fr; } .admin-dashboard-status-row label, .admin-dashboard-status-row input { grid-column: 1; grid-row: auto; } }
 
 /* Responsive layout safeguards for narrow phones, tablets, and split-screen windows. */

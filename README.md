@@ -31,6 +31,8 @@ In Firebase Console for project `picture-connect-with-kapil`, enable **Authentic
 3. The only admin account is the verified Google account `kapilnarula27july@gmail.com`; the app and Firestore rules both enforce this allowlist. Other Google accounts cannot access admin functions.
 4. After signing in with the allowlisted account, open **Admin dashboard** from the home page or Profile to review learner records, download a CSV report, and lock or unlock learner profiles. Profile lock actions are recorded in `adminAudit`.
 
+The dashboard also tracks Google sign-in sessions in `loginSessions/{UID}_{session}`. It refreshes learner activity every 45 seconds and when a tab becomes visible; the dashboard labels a learner online when a heartbeat arrived within the last two minutes. The CSV includes presence, latest sign-in, and latest activity. Session history starts after the updated app and Firestore rules are deployed, so earlier sign-ins are not available. Learner completion details include learning levels, English assessment attempts, and mock completion by topic.
+
 The dashboard does not use or display a shared password. Admin access requires Firebase Authentication for the allowlisted, verified Google account, and Firestore rules enforce the same identity. Learner assessment answers, attempts, XP, badges, completion levels, certificates, and profile metadata are synced to `learners/{UID}`. Firestore locks are stored separately in `learnerLocks/{UID}` so learners cannot clear an admin lock from the client.
 
 ---

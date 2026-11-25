@@ -47,6 +47,7 @@ let learnerLockUnsubscribe = null;
 let adminDataUnsubscribe = null;
 let adminLearnerRecords = [];
 let adminLockRecords = new Map();
+let adminSessionRecords = [];
 
 const LEVEL_BADGES = [
   { id: 'level_foundations', icon: '📖', title: 'Foundation Builder', desc: 'Passed Level 1 Foundations with at least 70%.' },
@@ -2799,6 +2800,9 @@ function handleFirebaseAuthState(user) {
     learnerLockUnsubscribe = null;
     adminDataUnsubscribe?.();
     adminDataUnsubscribe = null;
+    adminLearnerRecords = [];
+    adminLockRecords = new Map();
+    adminSessionRecords = [];
     if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
     cloudSaveTimeout = null;
     pendingCloudRecord = null;
@@ -2821,12 +2825,16 @@ function handleFirebaseAuthState(user) {
     adminDataUnsubscribe = null;
     adminLearnerRecords = [];
     adminLockRecords = new Map();
+    adminSessionRecords = [];
     if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
     cloudSaveTimeout = null;
     pendingCloudRecord = null;
     cloudHydrationPending = false;
   }
   authUser = user;
+  if (window.firebaseStartLearnerSession) {
+    window.firebaseStartLearnerSession(user.uid).catch(error => console.warn('Could not record learner session:', error?.code || error));
+  }
   loadSavedState(user);
   const localUpdatedAtAtLogin = Number(state.syncUpdatedAt) || 0;
   cloudHydrationPending = Boolean(window.firebaseLoadLearner);
@@ -2891,7 +2899,7 @@ function handleFirebaseAuthState(user) {
 
 function openAdminDashboard() {
   if (!authUser?.isAdmin) {
-    showToast('This Google account does not have the Firebase admin role.');
+    showToast('Sign in with the authorized admin Google account to view learner records.');
     return;
   }
   closeProfileModal();
@@ -2905,8 +2913,40 @@ function openAdminDashboard() {
   adminDataUnsubscribe = window.firebaseWatchAdminData(
     learners => { adminLearnerRecords = learners; renderAdminDashboard(); },
     locks => { adminLockRecords = new Map(locks.map(lock => [lock.id, lock])); renderAdminDashboard(); },
+    sessions => { adminSessionRecords = sessions; renderAdminDashboard(); },
     handleFirebaseCloudError
   );
+}
+
+function firestoreTimeMillis(value) {
+  if (value?.toMillis) return value.toMillis();
+  if (value?.toDate) return value.toDate().getTime();
+  if (typeof value === 'number') return value;
+  const parsed = new Date(value || '').getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function latestLearnerSession(uid) {
+  return adminSessionRecords
+    .filter(session => session.uid === uid)
+    .sort((a, b) => firestoreTimeMillis(b.signedInAt) - firestoreTimeMillis(a.signedInAt))[0] || null;
+}
+
+function latestLearnerActivity(uid) {
+  return adminSessionRecords
+    .filter(session => session.uid === uid)
+    .sort((a, b) => firestoreTimeMillis(b.lastSeenAt) - firestoreTimeMillis(a.lastSeenAt))[0] || null;
+}
+
+function learnerIsOnline(uid, cutoff) {
+  return adminSessionRecords.some(session => session.uid === uid
+    && firestoreTimeMillis(session.lastSeenAt) > cutoff
+    && (!firestoreTimeMillis(session.signedOutAt) || firestoreTimeMillis(session.lastSeenAt) > firestoreTimeMillis(session.signedOutAt)));
+}
+
+function formatAdminTimestamp(value) {
+  const millis = firestoreTimeMillis(value);
+  return millis ? new Date(millis).toLocaleString() : '—';
 }
 
 function renderAdminDashboard() {
@@ -2921,21 +2961,39 @@ function renderAdminDashboard() {
     [record.learnerName, record.email, record.uid, record.id].some(value => String(value || '').toLowerCase().includes(needle))
   );
   const status = document.getElementById('adminDashboardStatus');
-  if (status) status.textContent = `${adminLearnerRecords.length} learner profile${adminLearnerRecords.length === 1 ? '' : 's'} in Firebase · showing ${filtered.length}`;
+  const onlineCutoff = Date.now() - 120000;
+  const onlineCount = adminLearnerRecords.filter(record => learnerIsOnline(record.uid || record.id, onlineCutoff)).length;
+  if (status) status.textContent = `${adminLearnerRecords.length} learner profile${adminLearnerRecords.length === 1 ? '' : 's'} · ${onlineCount} active in the last 2 minutes · showing ${filtered.length}`;
   root.innerHTML = filtered.map(record => {
     const uid = record.uid || record.id;
     const levels = Array.isArray(record.learningLevels) ? record.learningLevels : [];
     const completedLevels = levels.filter(level => level.complete).length;
     const lock = adminLockRecords.get(uid);
+    const session = latestLearnerSession(uid);
+    const activity = latestLearnerActivity(uid);
+    const online = learnerIsOnline(uid, onlineCutoff);
     const lockUntil = lock?.until?.toDate ? lock.until.toDate().getTime() : Number(lock?.until) || 0;
     const locked = Boolean(lock && lockUntil > Date.now());
-    const updatedAt = record.updatedAt?.toDate ? record.updatedAt.toDate() : new Date(Number(record.clientUpdatedAt) || 0);
-    const updatedLabel = Number.isNaN(updatedAt.getTime()) || updatedAt.getTime() === 0 ? '—' : updatedAt.toLocaleString();
+    const levelsMarkup = levels.map(level => `<li class="${level.complete ? 'done' : ''}"><span>${level.complete ? '✓' : '○'}</span><span><strong>${escapeEnglishHTML(level.title || level.id)}</strong><small>${Number(level.answered) || 0}/${Number(level.total) || 0} answered · ${Number(level.percentage) || 0}%</small></span></li>`).join('');
+    const englishRecords = record.englishAssessments || {};
+    const englishMarkup = ENGLISH_TOPICS.map(topic => {
+      const result = englishRecords[topic.id];
+      const passed = Number(result?.bestPercent) >= 70;
+      return `<li class="${passed ? 'done' : ''}"><span>${passed ? '✓' : '○'}</span><span><strong>${escapeEnglishHTML(topic.title)}</strong><small>${result ? `${Number(result.bestCorrect) || 0}/50 · ${Number(result.bestPercent) || 0}% · ${Number(result.attempts) || 0} attempt${Number(result.attempts) === 1 ? '' : 's'}` : 'Not started'}</small></span></li>`;
+    }).join('');
+    const mockRecords = record.mockAssessments || {};
+    const mockMarkup = MOCK_TOPICS.map(topic => {
+      const forms = MOCK_DIFFICULTIES.map((difficulty, index) => mockRecords[`${topic.id}:${index + 1}`]);
+      const completed = forms.filter(Boolean).length;
+      const passed = forms.filter(result => result?.passed).length;
+      return `<li class="${completed === MOCK_DIFFICULTIES.length ? 'done' : ''}"><span>${completed === MOCK_DIFFICULTIES.length ? '✓' : '○'}</span><span><strong>${escapeEnglishHTML(topic.title)}</strong><small>${completed}/5 completed · ${passed}/5 passed</small></span></li>`;
+    }).join('');
     const action = locked
       ? `<button class="btn btn-secondary" type="button" onclick="adminUnlockLearner('${escapeEnglishHTML(uid)}')">Unlock profile</button><small>Locked until ${escapeEnglishHTML(new Date(lockUntil).toLocaleString())}</small>`
       : `<button class="btn btn-secondary" type="button" onclick="adminLockLearner('${escapeEnglishHTML(uid)}')">Lock 24 hours</button>`;
-    return `<tr><td><strong>${escapeEnglishHTML(record.learnerName || 'Learner')}</strong><small>${escapeEnglishHTML(record.email || '')}</small><small title="${escapeEnglishHTML(uid)}">UID ${escapeEnglishHTML(uid.slice(0, 14))}</small></td><td>${Number(record.xp) || 0} XP<small>Level ${Number(record.level) || 1} · streak ${Number(record.streak) || 0}</small></td><td>${Number(record.badgeCount) || 0}/51</td><td>${completedLevels}/${levels.length || 10}</td><td>${Number(record.passedMocks) || 0}/95</td><td>${record.certificateIssued ? 'Issued' : 'Not issued'}</td><td>${escapeEnglishHTML(updatedLabel)}</td><td>${action}</td></tr>`;
-  }).join('') || '<tr><td colspan="8">No learner profiles match this search.</td></tr>';
+    const detail = `<details class="admin-progress-details"><summary>View completion details</summary><p><strong>Answered learning questions:</strong> ${Number(record.answeredQuestionCount) || 0}</p><strong>Learning levels</strong><ul>${levelsMarkup || '<li>Not started</li>'}</ul><strong>English assessments</strong><ul>${englishMarkup}</ul><strong>Mock assessments</strong><ul>${mockMarkup}</ul></details>`;
+    return `<tr><td><strong>${escapeEnglishHTML(record.learnerName || 'Learner')}</strong><small>${escapeEnglishHTML(record.email || '')}</small><small title="${escapeEnglishHTML(uid)}">UID ${escapeEnglishHTML(uid.slice(0, 14))}</small></td><td><span class="admin-presence ${online ? 'online' : 'offline'}">${online ? '● Online' : '○ Offline'}</span></td><td>${Number(record.xp) || 0} XP<small>Level ${Number(record.level) || 1} · streak ${Number(record.streak) || 0}</small></td><td>${Number(record.badgeCount) || 0}/51</td><td>${completedLevels}/${levels.length || 10}</td><td>${detail}</td><td>${Number(record.passedMocks) || 0}/95</td><td>${record.certificateIssued ? 'Issued' : 'Not issued'}</td><td>${escapeEnglishHTML(formatAdminTimestamp(session?.signedInAt))}</td><td>${escapeEnglishHTML(formatAdminTimestamp(activity?.lastSeenAt))}</td><td>${action}</td></tr>`;
+  }).join('') || '<tr><td colspan="11">No learner profiles match this search.</td></tr>';
 }
 
 async function adminLockLearner(uid) {
@@ -2960,13 +3018,20 @@ async function adminUnlockLearner(uid) {
 
 function downloadAdminReport() {
   if (!authUser?.isAdmin) return;
-  const columns = ['uid', 'learnerName', 'email', 'xp', 'level', 'streak', 'badgeCount', 'answeredQuestionCount', 'learningLevels', 'englishAssessments', 'mockAssessments', 'passedMocks', 'certificateIssued', 'updatedAt', 'profileLockedUntil', 'profileData'];
+  const columns = ['uid', 'learnerName', 'email', 'sessionStatus', 'lastSignInAt', 'lastActivityAt', 'xp', 'level', 'streak', 'badgeCount', 'answeredQuestionCount', 'learningLevels', 'englishAssessments', 'mockAssessments', 'passedMocks', 'certificateIssued', 'updatedAt', 'profileLockedUntil', 'profileData'];
   const rows = adminLearnerRecords.map(record => {
     const lock = adminLockRecords.get(record.uid || record.id);
+    const uid = record.uid || record.id;
+    const session = latestLearnerSession(uid);
+    const activity = latestLearnerActivity(uid);
+    const online = learnerIsOnline(uid, Date.now() - 120000);
     const lockUntil = lock?.until?.toDate ? lock.until.toDate().toISOString() : '';
     return columns.map(column => {
       const value = column === 'profileLockedUntil' ? lockUntil : column === 'updatedAt'
         ? (record.updatedAt?.toDate ? record.updatedAt.toDate().toISOString() : record.clientUpdatedAt || '')
+        : column === 'sessionStatus' ? (online ? 'online' : 'offline')
+        : column === 'lastSignInAt' ? formatAdminTimestamp(session?.signedInAt)
+        : column === 'lastActivityAt' ? formatAdminTimestamp(activity?.lastSeenAt)
         : ['learningLevels', 'englishAssessments', 'mockAssessments', 'profileData'].includes(column)
           ? JSON.stringify(record[column] || [])
           : column === 'uid' ? record.uid || record.id : record[column] ?? '';
@@ -3285,6 +3350,10 @@ async function handleLogoff() {
     closeProfileModal();
     try {
       await flushPendingCloudSave();
+      if (window.firebaseEndLearnerSession) {
+        try { await window.firebaseEndLearnerSession(); }
+        catch (error) { console.warn('Could not mark learner session as signed out:', error?.code || error); }
+      }
       await window.firebaseSignOut?.();
     } catch (error) {
       handleFirebaseSignOutError(error);

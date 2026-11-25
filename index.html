@@ -991,13 +991,14 @@
 
       <section id="tab-admin-dashboard" class="tab-pane">
         <div class="section-header">
-          <div class="badge-chip">Restricted • Firebase admin role</div>
+          <div class="badge-chip">Restricted • authorized admin account</div>
           <h2>Learner Admin Dashboard</h2>
-          <p class="section-desc">Review cloud-synced learner progress, export a report, and manage proctor locks. Admin access is granted by Firebase UID and enforced by Firestore rules.</p>
+          <p class="section-desc">See who is active, when learners signed in, recent activity, completed and incomplete learning, assessment results, and proctor locks. Download a report or manage profile locks.</p>
           <div class="admin-dashboard-toolbar"><button class="btn btn-secondary" type="button" onclick="switchTab('tab-concepts')">← Back to learning</button><button class="btn btn-primary" type="button" onclick="downloadAdminReport()">Download CSV report</button></div>
         </div>
         <div class="admin-dashboard-status-row"><p id="adminDashboardStatus" role="status" aria-live="polite">Loading learner records…</p><label for="adminLearnerSearch">Search learners</label><input id="adminLearnerSearch" class="form-input" type="search" placeholder="Name, email or UID" oninput="renderAdminDashboard()"></div>
-        <div class="admin-table-wrap"><table class="admin-learner-table"><thead><tr><th>Learner</th><th>XP / level</th><th>Badges</th><th>Learning levels</th><th>Mocks passed</th><th>Certificate</th><th>Last update</th><th>Profile control</th></tr></thead><tbody id="adminLearnerRows"></tbody></table></div>
+        <p class="admin-activity-note">Online means a session heartbeat arrived within the last 2 minutes. Closed or suspended tabs age to offline automatically. Session history begins when this update is deployed.</p>
+        <div class="admin-table-wrap"><table class="admin-learner-table"><thead><tr><th>Learner</th><th>Presence</th><th>XP / level</th><th>Badges</th><th>Learning levels</th><th>Question and topic completion</th><th>Mocks passed</th><th>Certificate</th><th>Last sign-in</th><th>Last activity</th><th>Profile control</th></tr></thead><tbody id="adminLearnerRows"></tbody></table></div>
       </section>
 
     </main>

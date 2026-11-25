@@ -23,6 +23,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   Timestamp
 } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
 
@@ -73,7 +74,7 @@ try {
     snapshot => callback(snapshot.exists() ? snapshot.data() : null),
     onError
   );
-  window.firebaseWatchAdminData = (onLearners, onLocks, onError) => {
+  window.firebaseWatchAdminData = (onLearners, onLocks, onSessions, onError) => {
     const learnerUnsubscribe = onSnapshot(
       query(collection(db, 'learners'), orderBy('updatedAt', 'desc')),
       snapshot => onLearners(snapshot.docs.map(item => ({ id: item.id, ...item.data() }))),
@@ -84,7 +85,60 @@ try {
       snapshot => onLocks(snapshot.docs.map(item => ({ id: item.id, ...item.data() }))),
       onError
     );
-    return () => { learnerUnsubscribe(); locksUnsubscribe(); };
+    const sessionsUnsubscribe = onSnapshot(
+      query(collection(db, 'loginSessions'), orderBy('lastSeenAt', 'desc')),
+      snapshot => onSessions(snapshot.docs.map(item => ({ id: item.id, ...item.data() }))),
+      onError
+    );
+    return () => { learnerUnsubscribe(); locksUnsubscribe(); sessionsUnsubscribe(); };
+  };
+  let activeLoginSession = null;
+  let loginHeartbeat = null;
+  let refreshSessionOnVisibility = null;
+  window.firebaseStartLearnerSession = async uid => {
+    if (loginHeartbeat) clearInterval(loginHeartbeat);
+    if (refreshSessionOnVisibility) document.removeEventListener('visibilitychange', refreshSessionOnVisibility);
+    let sessionToken;
+    try {
+      sessionToken = sessionStorage.getItem('jietPlacementSessionId');
+      if (!sessionToken) {
+        sessionToken = crypto.randomUUID();
+        sessionStorage.setItem('jietPlacementSessionId', sessionToken);
+      }
+    } catch {
+      sessionToken = crypto.randomUUID();
+    }
+    activeLoginSession = doc(db, 'loginSessions', `${uid}_${sessionToken}`);
+    const heartbeat = () => setDoc(activeLoginSession, {
+      uid,
+      sessionId: sessionToken,
+      lastSeenAt: serverTimestamp(),
+      signedOutAt: null,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    await setDoc(activeLoginSession, {
+      uid,
+      sessionId: sessionToken,
+      signedInAt: serverTimestamp(),
+      lastSeenAt: serverTimestamp(),
+      signedOutAt: null,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    loginHeartbeat = setInterval(() => heartbeat().catch(error => console.warn('Learner activity heartbeat failed:', error?.code || error)), 45000);
+    refreshSessionOnVisibility = () => {
+      if (document.visibilityState === 'visible') heartbeat().catch(error => console.warn('Learner activity refresh failed:', error?.code || error));
+    };
+    document.addEventListener('visibilitychange', refreshSessionOnVisibility);
+  };
+  window.firebaseEndLearnerSession = async () => {
+    if (loginHeartbeat) clearInterval(loginHeartbeat);
+    loginHeartbeat = null;
+    if (refreshSessionOnVisibility) document.removeEventListener('visibilitychange', refreshSessionOnVisibility);
+    refreshSessionOnVisibility = null;
+    if (!activeLoginSession) return;
+    const sessionRef = activeLoginSession;
+    activeLoginSession = null;
+    await updateDoc(sessionRef, { lastSeenAt: serverTimestamp(), signedOutAt: serverTimestamp(), updatedAt: serverTimestamp() });
   };
   window.firebaseLockLearner = (uid, untilMillis, reason, source = 'proctor') => setDoc(doc(db, 'learnerLocks', uid), {
     uid,

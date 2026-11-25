@@ -55,6 +55,18 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    function validLoginSession(uid, sessionId) {
+      return request.resource.data.keys().hasOnly([
+          'uid', 'sessionId', 'signedInAt', 'lastSeenAt', 'signedOutAt', 'updatedAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.sessionId == sessionId
+        && request.resource.data.signedInAt is timestamp
+        && request.resource.data.lastSeenAt == request.time
+        && (request.resource.data.signedOutAt == null || request.resource.data.signedOutAt == request.time)
+        && request.resource.data.updatedAt == request.time;
+    }
+
     match /admins/{uid} {
       allow get: if isOwner(uid);
       allow list, create, update, delete: if false;
@@ -75,6 +87,20 @@ service cloud.firestore {
         && validLearnerLock(uid)
         && request.resource.data.until >= resource.data.until
       );
+      allow delete: if isAdmin();
+    }
+
+    match /loginSessions/{sessionId} {
+      allow get, list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && validLoginSession(request.auth.uid, sessionId)
+        && request.resource.data.signedInAt == request.time;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && validLoginSession(request.auth.uid, sessionId)
+        && (request.resource.data.signedInAt == resource.data.signedInAt
+          || request.resource.data.signedInAt == request.time);
       allow delete: if isAdmin();
     }
 
