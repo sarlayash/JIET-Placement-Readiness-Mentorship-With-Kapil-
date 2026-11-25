@@ -1,0 +1,61 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "learners": {
+      ".read": "auth != null && auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com'))",
+        ".write": "auth != null && auth.uid === $uid && (!root.child('learnerLocks').child($uid).exists() || root.child('learnerLocks').child($uid).child('until').val() <= now)",
+        ".validate": "newData.hasChildren(['uid', 'learnerName', 'email', 'xp', 'level', 'badgeCount', 'learningLevels', 'profileData', 'clientUpdatedAt', 'updatedAt']) && newData.child('uid').val() === $uid && newData.child('learnerName').isString() && newData.child('email').isString() && newData.child('xp').isNumber() && newData.child('level').isNumber() && newData.child('badgeCount').isNumber() && newData.child('learningLevels').exists() && newData.child('profileData').exists() && newData.child('clientUpdatedAt').isNumber() && newData.child('updatedAt').isNumber()",
+        "uid": { ".validate": "newData.isString() && newData.val() === $uid" },
+        "learnerName": { ".validate": "newData.isString()" },
+        "email": { ".validate": "newData.isString()" },
+        "photoURL": { ".validate": "newData.isString()" },
+        "xp": { ".validate": "newData.isNumber()" },
+        "level": { ".validate": "newData.isNumber()" },
+        "streak": { ".validate": "newData.isNumber()" },
+        "badgeCount": { ".validate": "newData.isNumber()" },
+        "unlockedBadges": { ".validate": "newData.exists()" },
+        "answeredQuestionCount": { ".validate": "newData.isNumber()" },
+        "learningLevels": { ".validate": "newData.exists()" },
+        "englishAssessments": { ".validate": "newData.exists()" },
+        "mockAssessments": { ".validate": "newData.exists()" },
+        "passedMocks": { ".validate": "newData.isNumber()" },
+        "certificateIssued": { ".validate": "newData.isBoolean()" },
+        "clientUpdatedAt": { ".validate": "newData.isNumber()" },
+        "profileData": { ".validate": "newData.exists()" },
+        "updatedAt": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "learnerLocks": {
+      ".read": "auth != null && auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com'))",
+        ".write": "auth != null && ((auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com') || (auth.uid === $uid && newData.child('source').val() === 'proctor' && newData.child('until').val() > now && newData.child('until').val() <= now + 86400000))",
+        ".validate": "newData.hasChildren(['uid', 'until', 'reason', 'source', 'updatedBy', 'updatedAt']) && newData.child('uid').val() === $uid && newData.child('until').isNumber() && newData.child('reason').isString() && newData.child('updatedBy').isString() && newData.child('updatedAt').isNumber() && ((newData.child('source').val() === 'proctor' && auth.uid === $uid && newData.child('updatedBy').val() === auth.uid) || (newData.child('source').val() === 'admin' && auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com' && newData.child('updatedBy').val() === auth.uid))",
+        "$other": { ".validate": false }
+      }
+    },
+    "loginSessions": {
+      ".read": "auth != null && auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com'",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com'))",
+        "$sessionId": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChildren(['uid', 'sessionId', 'signedInAt', 'lastSeenAt', 'updatedAt']) && newData.child('uid').val() === $uid && newData.child('sessionId').val() === $sessionId && newData.child('signedInAt').isNumber() && newData.child('lastSeenAt').isNumber() && newData.child('updatedAt').isNumber() && (newData.child('signedOutAt').val() == null || newData.child('signedOutAt').isNumber())",
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "adminAudit": {
+      ".read": "auth != null && auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com'",
+      "$eventId": {
+        ".write": "auth != null && auth.token.email_verified === true && auth.token.email === 'kapilnarula27july@gmail.com'",
+        ".validate": "newData.hasChildren(['action', 'learnerUid', 'reason', 'adminUid', 'createdAt']) && (newData.child('action').val() === 'lock_profile' || newData.child('action').val() === 'unlock_profile') && newData.child('learnerUid').isString() && newData.child('reason').isString() && newData.child('adminUid').val() === auth.uid && newData.child('createdAt').isNumber()",
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

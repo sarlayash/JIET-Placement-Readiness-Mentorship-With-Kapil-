@@ -2786,7 +2786,7 @@ function handleFirebaseAuthError(error) {
 function handleFirebaseCloudError(error) {
   setCloudSyncStatus('Firebase data is unavailable. Progress is still saved locally.');
   const status = document.getElementById('adminDashboardStatus');
-  if (status && authUser?.isAdmin) status.textContent = 'Firebase could not load admin data. Check Firestore setup and security rules.';
+  if (status && authUser?.isAdmin) status.textContent = 'Firebase could not load admin data. Check Realtime Database setup and security rules.';
   console.warn('Firebase data operation failed:', error?.code || error);
 }
 
@@ -2906,7 +2906,7 @@ function openAdminDashboard() {
   switchTab('tab-admin-dashboard');
   if (adminDataUnsubscribe) return;
   if (!window.firebaseWatchAdminData) {
-    handleFirebaseCloudError(new Error('Firestore admin dashboard is unavailable.'));
+    handleFirebaseCloudError(new Error('Realtime Database admin dashboard is unavailable.'));
     return;
   }
   document.getElementById('adminDashboardStatus').textContent = 'Loading Firebase learner records…';
@@ -2918,7 +2918,7 @@ function openAdminDashboard() {
   );
 }
 
-function firestoreTimeMillis(value) {
+function firebaseTimeMillis(value) {
   if (value?.toMillis) return value.toMillis();
   if (value?.toDate) return value.toDate().getTime();
   if (typeof value === 'number') return value;
@@ -2929,23 +2929,23 @@ function firestoreTimeMillis(value) {
 function latestLearnerSession(uid) {
   return adminSessionRecords
     .filter(session => session.uid === uid)
-    .sort((a, b) => firestoreTimeMillis(b.signedInAt) - firestoreTimeMillis(a.signedInAt))[0] || null;
+    .sort((a, b) => firebaseTimeMillis(b.signedInAt) - firebaseTimeMillis(a.signedInAt))[0] || null;
 }
 
 function latestLearnerActivity(uid) {
   return adminSessionRecords
     .filter(session => session.uid === uid)
-    .sort((a, b) => firestoreTimeMillis(b.lastSeenAt) - firestoreTimeMillis(a.lastSeenAt))[0] || null;
+    .sort((a, b) => firebaseTimeMillis(b.lastSeenAt) - firebaseTimeMillis(a.lastSeenAt))[0] || null;
 }
 
 function learnerIsOnline(uid, cutoff) {
   return adminSessionRecords.some(session => session.uid === uid
-    && firestoreTimeMillis(session.lastSeenAt) > cutoff
-    && (!firestoreTimeMillis(session.signedOutAt) || firestoreTimeMillis(session.lastSeenAt) > firestoreTimeMillis(session.signedOutAt)));
+    && firebaseTimeMillis(session.lastSeenAt) > cutoff
+    && (!firebaseTimeMillis(session.signedOutAt) || firebaseTimeMillis(session.lastSeenAt) > firebaseTimeMillis(session.signedOutAt)));
 }
 
 function formatAdminTimestamp(value) {
-  const millis = firestoreTimeMillis(value);
+  const millis = firebaseTimeMillis(value);
   return millis ? new Date(millis).toLocaleString() : '—';
 }
 
@@ -3028,7 +3028,7 @@ function downloadAdminReport() {
     const lockUntil = lock?.until?.toDate ? lock.until.toDate().toISOString() : '';
     return columns.map(column => {
       const value = column === 'profileLockedUntil' ? lockUntil : column === 'updatedAt'
-        ? (record.updatedAt?.toDate ? record.updatedAt.toDate().toISOString() : record.clientUpdatedAt || '')
+        ? (record.updatedAt?.toDate ? record.updatedAt.toDate().toISOString() : record.updatedAt || record.clientUpdatedAt || '')
         : column === 'sessionStatus' ? (online ? 'online' : 'offline')
         : column === 'lastSignInAt' ? formatAdminTimestamp(session?.signedInAt)
         : column === 'lastActivityAt' ? formatAdminTimestamp(activity?.lastSeenAt)

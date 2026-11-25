@@ -130,13 +130,13 @@ test('Google authentication is the app entry point and uses the supplied Firebas
   assert.match(authModule, /browserLocalPersistence/);
 });
 
-test('only the verified allowlisted Google account receives admin access in UI and Firestore rules', () => {
+test('only the verified allowlisted Google account receives admin access in UI and Realtime Database rules', () => {
   const auth = fs.readFileSync(path.join(process.cwd(), 'firebase-auth.js'), 'utf8');
-  const rules = fs.readFileSync(path.join(process.cwd(), 'firestore.rules'), 'utf8');
+  const rules = fs.readFileSync(path.join(process.cwd(), 'database.rules.json'), 'utf8');
   const html = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
-  assert.match(auth, /user\.emailVerified === true && user\.email\?\.toLowerCase\(\) === 'kapilnarula27july@gmail\.com'/);
-  assert.match(rules, /request\.auth\.token\.email_verified == true/);
-  assert.match(rules, /request\.auth\.token\.email == 'kapilnarula27july@gmail\.com'/);
+  assert.match(auth, /const isAdminUser = user => user\?\.emailVerified === true[\s\S]*user\.email\?\.toLowerCase\(\) === 'kapilnarula27july@gmail\.com'/);
+  assert.match(rules, /auth\.token\.email_verified === true/);
+  assert.match(rules, /auth\.token\.email === 'kapilnarula27july@gmail\.com'/);
   assert.match(html, /id="homeAdminDashboardLink"[^>]*onclick="openAdminDashboard\(\)"/);
 });
 

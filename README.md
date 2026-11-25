@@ -16,24 +16,24 @@
 ### 📱 Install as Mobile App (PWA)
 - **Android / Chrome / Edge:** Open the web app and tap the **"📲 Install App"** button in the header or your browser menu.
 - **iOS / Safari:** Tap the **Share** button `⎋`, then select **"Add to Home Screen"** `➕`.
-- After the app shell and Firebase SDK load online, the curriculum, styles, scripts, local images, and Firestore cache support offline practice. Google OAuth sign-in requires an internet connection. Google Fonts also require internet; system fonts are used when unavailable.
-- Sign in with Google to open a learner profile. Progress syncs to Firestore when connected and stays cached locally for offline use.
+- After the app shell and Firebase SDK load online, the curriculum, styles, scripts, and local images support offline practice. Google OAuth sign-in and Realtime Database sync require an internet connection. Google Fonts also require internet; system fonts are used when unavailable.
+- Sign in with Google to open a learner profile. Progress syncs to Firebase Realtime Database when connected and remains saved locally for offline use.
 - Select **🔊 Read aloud** on any practice or assessment question to hear its prompt and answer choices. Speech uses the browser/device voice engine; an active read can be stopped from the same button.
 
 ### Enable Google Authentication
 
 In Firebase Console for project `picture-connect-with-kapil`, enable **Authentication → Sign-in method → Google** and add `sarlayash.github.io` under **Authentication → Settings → Authorized domains**. `localhost` can be used for local development. Firebase Authentication handles sign-up automatically the first time a learner continues with Google.
 
-### Firestore Progress and Admin Dashboard
+### No-cost Firebase Data and Admin Dashboard
 
-1. Create a Cloud Firestore database for project `picture-connect-with-kapil`.
-2. Deploy the included security rules with `firebase deploy --only firestore:rules --project picture-connect-with-kapil`.
-3. The only admin account is the verified Google account `kapilnarula27july@gmail.com`; the app and Firestore rules both enforce this allowlist. Other Google accounts cannot access admin functions.
+1. This project uses Firebase Authentication and the Spark-plan Firebase Realtime Database. The default database is in `asia-southeast1`; the app stores its database URL in `firebase-auth.js`.
+2. Deploy the included database security rules with `firebase deploy --only database --project picture-connect-with-kapil`.
+3. The only admin account is the verified Google account `kapilnarula27july@gmail.com`; the app and Realtime Database rules both enforce this allowlist. Other Google accounts cannot access admin functions.
 4. After signing in with the allowlisted account, open **Admin dashboard** from the home page or Profile to review learner records, download a CSV report, and lock or unlock learner profiles. Profile lock actions are recorded in `adminAudit`.
 
-The dashboard also tracks Google sign-in sessions in `loginSessions/{UID}_{session}`. It refreshes learner activity every 45 seconds and when a tab becomes visible; the dashboard labels a learner online when a heartbeat arrived within the last two minutes. The CSV includes presence, latest sign-in, and latest activity. Session history starts after the updated app and Firestore rules are deployed, so earlier sign-ins are not available. Learner completion details include learning levels, English assessment attempts, and mock completion by topic.
+The dashboard tracks Google sign-in sessions under `loginSessions/{UID}/{session}`. A server-side disconnect handler marks closed sessions offline, with a heartbeat every 45 seconds while open. The dashboard labels a learner online while their latest heartbeat is within two minutes. The CSV includes presence, latest sign-in, and latest activity. Learner completion details include learning levels, English assessment attempts, and mock completion by topic.
 
-The dashboard does not use or display a shared password. Admin access requires Firebase Authentication for the allowlisted, verified Google account, and Firestore rules enforce the same identity. Learner assessment answers, attempts, XP, badges, completion levels, certificates, and profile metadata are synced to `learners/{UID}`. Firestore locks are stored separately in `learnerLocks/{UID}` so learners cannot clear an admin lock from the client.
+The dashboard does not use or display a shared password. Admin access requires Firebase Authentication for the allowlisted, verified Google account, and Realtime Database rules enforce the same identity. Learner assessment answers, attempts, XP, badges, completion levels, certificates, and profile metadata are synced to `learners/{UID}`. Profile locks are stored separately in `learnerLocks/{UID}` so learners cannot clear an admin lock from the client.
 
 ---
 
@@ -91,8 +91,8 @@ The dashboard does not use or display a shared password. Admin access requires F
 
 - Five timed mock forms are available for each learning topic, from Easy through Medium to Hard.
 - Each mock awards XP once on its first completion. Passing all five forms in a topic at 70% or higher unlocks that topic's badge and PNG/PDF certificate.
-- Camera-free proctoring uses fullscreen and page visibility when the browser supports them. Three warnings create a Firestore-backed 24-hour profile lock for signed-in learners; profile writes are rejected by Firestore rules until the lock expires or an admin removes it.
-- Learner progress syncs to Firestore when connected, with local storage and Firestore offline cache supporting offline use. Google sign-in and server sync require internet access.
+- Camera-free proctoring uses fullscreen and page visibility when the browser supports them. Three warnings create a Realtime Database-backed 24-hour profile lock for signed-in learners; profile writes are rejected by database rules until the lock expires or an admin removes it.
+- Learner progress syncs to Realtime Database when connected, with local storage supporting offline use. Google sign-in and server sync require internet access.
 
 ---
 

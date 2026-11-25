@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jiet-kapil-placement-v11';
+const CACHE_NAME = 'jiet-kapil-placement-v12';
 const APP_SHELL = [
   './',
   './index.html',
